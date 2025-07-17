@@ -28,25 +28,36 @@ const InsightsStatsDashboard: React.FC<InsightsStatsDashboardProps> = ({
     const successRate = totalCalls > 0 ? (successfulCalls / totalCalls) * 100 : 0;
 
     // Calculate average call duration - FIXED VERSION
-    const validDurations = filteredRecords
-      .map(record => {
-        if (!record.call_duration) return null;
-        try {
-          let parsedDuration: { minutes?: number; seconds?: number };
-          if (typeof record.call_duration === "string") {
-            parsedDuration = JSON.parse(record.call_duration);
-          } else {
-            parsedDuration = record.call_duration;
-          }
-          // Handle cases where minutes or seconds might be undefined
-          const minutes = parsedDuration.minutes || 0;
-          const seconds = parsedDuration.seconds || 0;
-          return minutes * 60 + seconds;
-        } catch {
-          return null;
-        }
-      })
-      .filter(duration => duration !== null) as number[];
+const validDurations = filteredRecords
+  .map(record => {
+    if (!record.call_duration) return null;
+    try {
+      let parsedDuration: { minutes?: number; seconds: number };
+      if (typeof record.call_duration === "string") {
+        parsedDuration = JSON.parse(record.call_duration);
+      } else {
+        parsedDuration = record.call_duration;
+      }
+      
+      // Extract seconds and provide default value for minutes
+      const { seconds, minutes = 0 } = parsedDuration;
+      
+      // Validate that we have valid numbers
+      if (typeof seconds !== "number" || seconds < 0) {
+        return null;
+      }
+      
+      // Validate minutes if it exists
+      if (minutes !== undefined && (typeof minutes !== "number" || minutes < 0)) {
+        return null;
+      }
+      
+      return minutes * 60 + seconds;
+    } catch {
+      return null;
+    }
+  })
+  .filter(duration => duration !== null) as number[];
 
     const averageDurationSeconds = validDurations.length > 0 
       ? validDurations.reduce((sum, duration) => sum + duration, 0) / validDurations.length 

@@ -206,37 +206,44 @@ const CallLogTable: React.FC<CallLogTableProps> = ({ className }) => {
     }
   };
 
-  const formatCallDuration = (
-    duration: string | { minutes: number; seconds: number } | null
-  ): string => {
-    if (!duration) return "N/A";
+const formatCallDuration = (
+  duration: string | { minutes?: number; seconds: number } | null
+): string => {
+  if (!duration) return "N/A";
 
-    try {
-      // If duration is a string, parse it as JSON
-      let parsedDuration: { minutes: number; seconds: number };
+  try {
+    // If duration is a string, parse it as JSON
+    let parsedDuration: { minutes?: number; seconds: number };
 
-      if (typeof duration === "string") {
-        parsedDuration = JSON.parse(duration);
-      } else {
-        parsedDuration = duration;
-      }
+    if (typeof duration === "string") {
+      parsedDuration = JSON.parse(duration);
+    } else {
+      parsedDuration = duration;
+    }
 
-      const { minutes, seconds } = parsedDuration;
+    // Extract seconds and provide default value for minutes
+    const { seconds, minutes = 0 } = parsedDuration;
 
-      // Validate that we have valid numbers
-      if (typeof minutes !== "number" || typeof seconds !== "number") {
-        return "N/A";
-      }
-
-      if (minutes === 0) {
-        return `${seconds}s`;
-      }
-      return `${minutes}m ${seconds}s`;
-    } catch (error) {
-      console.error("Error parsing call duration:", error);
+    // Validate that we have valid numbers
+    if (typeof seconds !== "number" || seconds < 0) {
       return "N/A";
     }
-  };
+
+    // Validate minutes if it exists
+    if (minutes !== undefined && (typeof minutes !== "number" || minutes < 0)) {
+      return "N/A";
+    }
+
+    // Format the duration
+    if (minutes === 0 || minutes === undefined) {
+      return `${seconds}s`;
+    }
+    return `${minutes}m ${seconds}s`;
+  } catch (error) {
+    console.error("Error parsing call duration:", error);
+    return "N/A";
+  }
+};
 
   const handlePageChange = (page: number) => {
     if (page >= 1 && page <= totalPages) {
