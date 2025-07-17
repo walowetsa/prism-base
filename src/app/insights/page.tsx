@@ -163,7 +163,7 @@ const InsightsPage = () => {
             loading={loading}
           />
         </div>
-        <div className="w-[30vw] min-w-[360px] max-w-[640px] h-[82vh]">
+        <div className="w-[30vw] min-w-[360px] max-w-[640px] h-[85vh]">
           <CallRecordsChat
             filteredRecords={filteredRecords}
             totalRecords={callRecords.length}

@@ -13,7 +13,7 @@ export async function GET(
   { params }: { params: { contact_id: string } }
 ) {
   try {
-    const { contact_id } = params
+    const { contact_id } = await params
 
     if (!contact_id) {
       return NextResponse.json(
