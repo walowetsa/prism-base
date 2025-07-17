@@ -154,7 +154,7 @@ const InsightsStatsDashboard: React.FC<InsightsStatsDashboardProps> = ({
   }
 
   return (
-    <div className="flex-1 p-4 space-y-6 max-h-[85vh] overflow-y-scroll">
+    <div className="flex-1 p-4 space-y-6 max-h-[82vh] overflow-y-scroll">
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
         <div className="bg-black p-6 rounded-lg shadow-sm">
           <div className="text-2xl font-bold text-emerald-800">{statistics.totalCalls}</div>

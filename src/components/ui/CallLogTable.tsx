@@ -406,7 +406,7 @@ const CallLogTable: React.FC<CallLogTableProps> = ({ className }) => {
 
       {/* Table Container */}
       <div className="bg-white shadow-sm rounded-lg border border-gray-200 overflow-hidden">
-        <div className="overflow-auto max-h-[80vh]">
+        <div className="overflow-auto max-h-[75vh]">
           <table className="w-full table-fixed">
             <thead className="bg-gray-50 border-b border-gray-200 sticky top-0 z-10">
               <tr>
