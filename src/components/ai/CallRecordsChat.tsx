@@ -621,12 +621,6 @@ const CallRecordsChat: React.FC<CallRecordsChatProps> = ({
                         {(message.metadata.processingTime / 1000).toFixed(1)}s
                       </span>
                     )}
-                    {message.metadata.tokensUsed && (
-                      <span>{message.metadata.tokensUsed} tokens</span>
-                    )}
-                    {message.metadata.model && (
-                      <span>{message.metadata.model}</span>
-                    )}
                     {message.metadata.dataPoints && (
                       <span>{message.metadata.dataPoints.toLocaleString()} data points</span>
                     )}
