@@ -18,7 +18,7 @@ const estimateTokens = (text: string): number => {
 };
 
 // Smart data sampling for large datasets
-const sampleData = (records: any[], maxSamples: number = 100): any[] => {
+const sampleData = (records: any[], maxSamples: number = 500): any[] => {
   if (records.length <= maxSamples) return records;
   
   // Stratified sampling to maintain data distribution

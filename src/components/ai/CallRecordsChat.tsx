@@ -176,7 +176,7 @@ const classifyQuery = (query: string, recordCount: number): {
 
 // Progressive data preparation - start small and expand if needed
 const prepareProgressiveData = (records: CallRecord[], queryType: string, complexity: 'simple' | 'complex') => {
-  const maxRecords = complexity === 'simple' ? 200 : 100;
+  const maxRecords = complexity === 'simple' ? 200 : 500;
   const workingRecords = records.slice(0, maxRecords);
   
   // Use your existing prepareSmartData function but with limited records
@@ -643,7 +643,7 @@ const CallRecordsChat: React.FC<CallRecordsChatProps> = ({
                 <div className="text-sm text-black">
                   {dataComplexity?.complexity === 'extreme' 
                     ? 'Processing large dataset...' 
-                    : 'Analyzing data...'}
+                    : 'Thinking...'}
                 </div>
                 <div className="flex gap-1">
                   <div className="w-2 h-2 bg-emerald-800 rounded-full animate-bounce"></div>
