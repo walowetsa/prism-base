@@ -356,7 +356,7 @@ const CallRecordsChat: React.FC<CallRecordsChatProps> = ({
     {
       id: '1',
       type: 'assistant',
-      content: "Welcome to PRISM AI Analytics!\n\nI'm your intelligent call center analytics assistant. I can analyse large datasets efficiently and provide insights on:\n\n• Call disposition patterns and success rates\n• Agent performance metrics and coaching opportunities\n• Customer sentiment trends and satisfaction analysis\n• Call timing optimization and efficiency metrics\n• Queue performance and resource allocation\n• Executive summaries with key KPIs\n\nI automatically optimize data processing based on your dataset size and query complexity. What would you like to explore?",
+      content: "Welcome to PRISM AI Analytics!\n\nI'm your intelligent call center analytics assistant. What would you like to explore?",
       timestamp: new Date()
     }
   ]);
