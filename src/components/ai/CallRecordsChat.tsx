@@ -518,7 +518,6 @@ const CallRecordsChat: React.FC<CallRecordsChatProps> = ({
       "Show me disposition breakdown with percentages",
       "Analyse customer sentiment trends",
       "What are our average call times?",
-      "Create an executive summary report"
     ];
 
     if (filteredRecords.length > 1000) {
