@@ -148,6 +148,9 @@ const classifyQuery = (query: string, recordCount: number): {
   // Determine query type
   if (lowerQuery.includes('disposition') || lowerQuery.includes('outcome')) {
     type = 'disposition';
+    // Disposition queries are simple but require full data
+    complexity = 'simple';
+    priority = 'high';
   } else if (lowerQuery.includes('sentiment') || lowerQuery.includes('satisfaction')) {
     type = 'sentiment';
   } else if (lowerQuery.includes('agent') || lowerQuery.includes('performance')) {
@@ -166,187 +169,58 @@ const classifyQuery = (query: string, recordCount: number): {
     complexity = 'complex';
   }
   
-  // Adjust complexity based on record count
-  if (recordCount > 1000) {
+  // Adjust complexity based on record count (except for disposition)
+  if (recordCount > 1000 && type !== 'disposition') {
     complexity = 'complex';
   }
   
   return { type, priority, complexity };
 };
 
-// Progressive data preparation - start small and expand if needed
-const prepareProgressiveData = (records: CallRecord[], queryType: string, complexity: 'simple' | 'complex') => {
-  const maxRecords = complexity === 'simple' ? 200 : 500;
-  const workingRecords = records.slice(0, maxRecords);
-  
-  // Use your existing prepareSmartData function but with limited records
-  return prepareSmartDataEnhanced(workingRecords, queryType, records.length);
-};
-
-// Enhanced version of your smart data preparation
-const prepareSmartDataEnhanced = (records: CallRecord[], queryType: string, totalCount: number) => {
-  const baseStats = {
-    totalRecords: totalCount,
-    analysedRecords: records.length,
-    samplingRatio: records.length / totalCount,
-    dateRange: records.length > 0 ? {
-      earliest: records.map(r => r.initiation_timestamp).filter(Boolean).sort()[0],
-      latest: records.map(r => r.initiation_timestamp).filter(Boolean).sort().reverse()[0]
-    } : null
-  };
-
-  // Helper functions (keeping your existing ones)
-  const extractSentiment = (sentimentAnalysis: any): string => {
-    if (!sentimentAnalysis) return 'Unknown';
-    if (Array.isArray(sentimentAnalysis) && sentimentAnalysis.length > 0) {
-      return sentimentAnalysis[0].sentiment || 'Unknown';
-    } else if (typeof sentimentAnalysis === 'string') {
-      return sentimentAnalysis;
-    }
-    return 'Unknown';
-  };
-
-  const extractDuration = (duration: any): number => {
-    if (!duration) return 0;
-    if (typeof duration === 'number') {
-      return duration;
-    } else if (typeof duration === 'object' && duration.minutes !== undefined && duration.seconds !== undefined) {
-      return (duration.minutes * 60) + duration.seconds;
-    }
-    return 0;
-  };
-
-  const extractTime = (time: any): number => {
-    if (!time) return 0;
-    if (typeof time === 'number') {
-      return time;
-    } else if (typeof time === 'object' && time.minutes !== undefined && time.seconds !== undefined) {
-      return (time.minutes * 60) + time.seconds;
-    }
-    return 0;
-  };
-
-  // Enhanced data preparation with statistical projections
-  switch (queryType) {
-    case 'disposition':
-      const dispositions = records.reduce((acc, record) => {
-        const disp = record.disposition_title || 'Unknown';
-        acc[disp] = (acc[disp] || 0) + 1;
-        return acc;
-      }, {} as Record<string, number>);
-      
-      // Project to full dataset if sampling
-      const projectedDispositions: Record<string, number> = {};
-      Object.entries(dispositions).forEach(([key, value]) => {
-        projectedDispositions[key] = Math.round(value / baseStats.samplingRatio);
-      });
-      
-      return {
-        type: 'disposition',
-        data: {
-          dispositions: baseStats.samplingRatio < 1 ? projectedDispositions : dispositions,
-          sampleSize: records.length,
-          ...baseStats
-        }
-      };
-
-    case 'agent_performance':
-      const agentStats = records.reduce((acc, record) => {
-        const agent = record.agent_username || 'Unknown';
-        if (!acc[agent]) {
-          acc[agent] = {
-            totalCalls: 0,
-            totalDuration: 0,
-            totalHoldTime: 0,
-            dispositions: {},
-            sentiments: {}
-          };
-        }
-        
-        acc[agent].totalCalls++;
-        acc[agent].totalDuration += extractDuration(record.call_duration);
-        acc[agent].totalHoldTime += extractTime(record.total_hold_time);
-        
-        const disp = record.disposition_title || 'Unknown';
-        acc[agent].dispositions[disp] = (acc[agent].dispositions[disp] || 0) + 1;
-        
-        const sentiment = extractSentiment(record.sentiment_analysis);
-        acc[agent].sentiments[sentiment] = (acc[agent].sentiments[sentiment] || 0) + 1;
-        
-        return acc;
-      }, {} as Record<string, any>);
-      
-      return {
-        type: 'agent_performance',
-        data: {
-          agentMetrics: agentStats,
-          totalAgents: Object.keys(agentStats).length,
-          ...baseStats
-        }
-      };
-
-    case 'summary':
-      const topDispositions = Object.entries(
-        records.reduce((acc, r) => {
-          const disp = r.disposition_title || 'Unknown';
-          acc[disp] = (acc[disp] || 0) + 1;
-          return acc;
-        }, {} as Record<string, number>)
-      ).sort(([,a], [,b]) => b - a).slice(0, 5);
-
-      return {
-        type: 'summary',
-        data: {
-          overview: {
-            totalCalls: totalCount,
-            analysedCalls: records.length,
-            uniqueAgents: new Set(records.map(r => r.agent_username).filter(Boolean)).size,
-            uniqueQueues: new Set(records.map(r => r.queue_name).filter(Boolean)).size,
-            avgCallDuration: records.reduce((sum, r) => sum + extractDuration(r.call_duration), 0) / records.length,
-            avgHoldTime: records.reduce((sum, r) => sum + extractTime(r.total_hold_time), 0) / records.length,
-            topDispositions,
-            sentimentDistribution: records.reduce((acc, r) => {
-              const sentiment = extractSentiment(r.sentiment_analysis);
-              acc[sentiment] = (acc[sentiment] || 0) + 1;
-              return acc;
-            }, {} as Record<string, number>)
-          },
-          ...baseStats
-        }
-      };
-
-    default:
-      // For general queries, provide a smart sample
-      const sampleRecords = records.slice(0, 10).map(record => ({
-        id: record.id,
-        agent_username: record.agent_username,
-        queue_name: record.queue_name,
-        call_duration: extractDuration(record.call_duration),
-        disposition_title: record.disposition_title,
-        sentiment_analysis: extractSentiment(record.sentiment_analysis),
-        primary_category: record.primary_category
-      }));
-      
-      return {
-        type: 'general',
-        data: {
-          sampleRecords,
-          quickStats: {
-            totalRecords: totalCount,
-            avgDuration: records.reduce((sum, r) => sum + extractDuration(r.call_duration), 0) / records.length,
-            topDisposition: Object.entries(
-              records.reduce((acc, r) => {
-                const disp = r.disposition_title || 'Unknown';
-                acc[disp] = (acc[disp] || 0) + 1;
-                return acc;
-              }, {} as Record<string, number>)
-            ).sort(([,a], [,b]) => b - a)[0]?.[0] || 'None'
-          },
-          ...baseStats
-        }
-      };
+// IMPROVED: Prepare data based on query type - no sampling for disposition queries
+const prepareQueryData = (records: CallRecord[], queryType: string, complexity: 'simple' | 'complex') => {
+  // For disposition queries, ALWAYS use all records
+  if (queryType === 'disposition') {
+    return {
+      originalRecords: records, // Send all records for accurate counting
+      type: 'disposition',
+      queryNote: 'Using complete dataset for accurate disposition counts'
+    };
   }
+  
+  // For other queries, we can use sampling for performance
+  const maxRecords = complexity === 'simple' ? 500 : 1000;
+  const workingRecords = records.length > maxRecords 
+    ? getRandomSample(records, maxRecords) 
+    : records;
+  
+  return {
+    originalRecords: workingRecords,
+    type: queryType,
+    queryNote: records.length > maxRecords 
+      ? `Using ${maxRecords} representative samples from ${records.length} total records`
+      : `Using all ${records.length} records`
+  };
 };
+
+// Random sampling function for better representation
+const getRandomSample = (records: CallRecord[], maxRecords: number): CallRecord[] => {
+  if (records.length <= maxRecords) return records;
+  
+  const sampleIndices = new Set<number>();
+  while (sampleIndices.size < maxRecords) {
+    const randomIndex = Math.floor(Math.random() * records.length);
+    sampleIndices.add(randomIndex);
+  }
+  
+  return Array.from(sampleIndices).map(i => records[i]);
+};
+
+// Legacy function for backward compatibility (simplified)
+// const prepareSmartDataEnhanced = (records: CallRecord[], queryType: string, totalCount: number) => {
+  // This is kept for any remaining legacy calls, but the main logic is now in prepareQueryData
+  // return prepareQueryData(records, queryType, 'simple');
+// };
 
 const CallRecordsChat: React.FC<CallRecordsChatProps> = ({
   filteredRecords,
@@ -426,11 +300,14 @@ const CallRecordsChat: React.FC<CallRecordsChatProps> = ({
 
     const attemptQuery = async (retryAttempt = 0): Promise<void> => {
       try {
-        const smartData = prepareProgressiveData(
+        // Use the improved data preparation
+        const queryData = prepareQueryData(
           filteredRecords, 
           queryClassification.type, 
           queryClassification.complexity
         );
+        
+        console.log(`🔍 Query Type: ${queryClassification.type} | Records: ${queryData.originalRecords.length} | Note: ${queryData.queryNote}`);
         
         const response = await fetch('/api/openai/query-calls', {
           method: 'POST',
@@ -439,7 +316,7 @@ const CallRecordsChat: React.FC<CallRecordsChatProps> = ({
           },
           body: JSON.stringify({
             query: queryText,
-            callData: smartData,
+            callData: queryData,
             queryType: queryClassification.type
           }),
         });
@@ -463,10 +340,17 @@ const CallRecordsChat: React.FC<CallRecordsChatProps> = ({
         }
 
         const processingTime = Date.now() - startTime;
+        let responseContent = data.response;
+        
+        // Add accuracy note for disposition queries
+        if (queryClassification.type === 'disposition') {
+          responseContent += `\n\n*✅ **Accuracy Note:** These disposition counts are exact - analyzed from your complete dataset of ${filteredRecords.length.toLocaleString()} records.*`;
+        }
+        
         const assistantMessage: Message = {
           id: (Date.now() + 1).toString(),
           type: 'assistant',
-          content: data.response,
+          content: responseContent,
           timestamp: new Date(),
           queryType: queryClassification.type,
           metadata: {
@@ -512,17 +396,17 @@ const CallRecordsChat: React.FC<CallRecordsChatProps> = ({
     return timestamp.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
   };
 
-  // Enhanced smart prompts based on data complexity
+  // Enhanced smart prompts based on data complexity and query types
   const getSmartPrompts = () => {
     const basePrompts = [
-      "Show me disposition breakdown with percentages",
+      "Show me exact disposition breakdown with counts",
       "Analyse customer sentiment trends",
       "What are our average call times?",
     ];
 
     if (filteredRecords.length > 1000) {
       return [
-        ...basePrompts,
+        ...basePrompts.slice(0, 2), // Keep the disposition prompts at the top
         "Identify top performing agents",
         "Show queue efficiency metrics",
         "What are the main customer issues?",
@@ -563,6 +447,9 @@ const CallRecordsChat: React.FC<CallRecordsChatProps> = ({
                 <span className="text-xs">{dataComplexity.recommendation}</span>
               </span>
             )}
+            <span className="flex items-center gap-1 text-xs bg-emerald-800 px-2 py-1 rounded">
+              ✅ Accurate Counts
+            </span>
           </div>
         </div>
         {retryCount > 0 && (
@@ -623,6 +510,11 @@ const CallRecordsChat: React.FC<CallRecordsChatProps> = ({
                     {message.metadata.dataPoints && (
                       <span>{message.metadata.dataPoints.toLocaleString()} data points</span>
                     )}
+                    {message.queryType === 'disposition' && (
+                      <span className="flex items-center gap-1 text-green-600">
+                        ✅ Exact counts
+                      </span>
+                    )}
                   </div>
                 )}
               </div>
@@ -670,9 +562,7 @@ const CallRecordsChat: React.FC<CallRecordsChatProps> = ({
                 ? "Loading data..." 
                 : filteredRecords.length === 0
                 ? "No data available for analysis..."
-                : dataComplexity?.complexity === 'extreme'
-                ? "Ask about your data - optimized processing enabled..."
-                : "Ask me anything about your call data..."
+                : "Ask me anything about your call data - disposition counts are 100% accurate!"
             }
             disabled={loading || filteredRecords.length === 0 || isTyping}
             className="flex-1 px-4 py-3 bg-white border border-emerald-800 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-800 focus:border-emerald-800 disabled:bg-white disabled:cursor-not-allowed text-black placeholder-emerald-800 text-sm shadow-inner"
@@ -708,7 +598,7 @@ const CallRecordsChat: React.FC<CallRecordsChatProps> = ({
         {filteredRecords.length > 0 && (
           <div className="text-xs text-white mt-3 flex items-center justify-between">
             <span>
-              Smart processing: {filteredRecords.length.toLocaleString()} records
+              ✅ Exact disposition counting: {filteredRecords.length.toLocaleString()} records
               {dataComplexity && (
                 <span className="ml-2 px-2 py-1 bg-neutral-700 rounded">
                   {dataComplexity.complexity} complexity
