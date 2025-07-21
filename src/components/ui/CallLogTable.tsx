@@ -28,7 +28,7 @@ const CallLogTable: React.FC<CallLogTableProps> = ({ className }) => {
     field: null,
     direction: "asc",
   });
-  const [filterPeriod, setFilterPeriod] = useState<FilterPeriod>("all");
+  const [filterPeriod, setFilterPeriod] = useState<FilterPeriod>("today");
   const [selectedAgent, setSelectedAgent] = useState<string>("");
   const dropdownRef = useRef<HTMLDivElement>(null);
 
@@ -412,10 +412,10 @@ const formatCallDuration = (
       </div>
 
       {/* Table Container */}
-      <div className="bg-white shadow-sm rounded-lg border border-gray-200 overflow-hidden">
+      <div className="bg-neutral-800 shadow-sm rounded-lg border border-neutral-800 overflow-hidden">
         <div className="overflow-auto max-h-[75vh]">
           <table className="w-full table-fixed">
-            <thead className="bg-gray-50 border-b border-gray-200 sticky top-0 z-10">
+            <thead className="bg-black border-b border-neutral-800 sticky top-0 z-10">
               <tr>
                 <th
                   className={`${getSortableHeaderClass("agent")} w-64`}
@@ -458,7 +458,7 @@ const formatCallDuration = (
                 <th className="px-4 py-3 text-left text-xs font-medium text-emerald-800 uppercase tracking-wider w-20"></th>
               </tr>
             </thead>
-            <tbody className="bg-black divide-y divide-neutral-200">
+            <tbody className="bg-black divide-y divide-neutral-800">
               {currentRecords.map((record) => (
                 <tr
                   key={record.contact_id}
@@ -541,8 +541,8 @@ const formatCallDuration = (
               disabled={currentPage === 1}
               className={`px-3 py-2 text-sm font-medium rounded-md ${
                 currentPage === 1
-                  ? "bg-gray-100 text-gray-400 cursor-not-allowed"
-                  : "bg-white text-gray-700 border border-gray-300 hover:bg-gray-50"
+                  ? "bg-neutral-200 text-gray-400 cursor-not-allowed"
+                  : "bg-neutral-200 text-gray-700 border border-gray-300 hover:bg-gray-50"
               }`}
             >
               Previous
@@ -556,7 +556,7 @@ const formatCallDuration = (
                   className={`px-3 py-2 text-sm font-medium rounded-md ${
                     currentPage === page
                       ? "bg-emerald-800 text-white"
-                      : "bg-white text-gray-700 border border-gray-300 hover:bg-gray-50"
+                      : "bg-neutral-200 text-gray-700 border border-gray-300 hover:bg-gray-50"
                   }`}
                 >
                   {page}
@@ -569,8 +569,8 @@ const formatCallDuration = (
               disabled={currentPage === totalPages}
               className={`px-3 py-2 text-sm font-medium rounded-md ${
                 currentPage === totalPages
-                  ? "bg-gray-100 text-gray-400 cursor-not-allowed"
-                  : "bg-white text-gray-700 border border-gray-300 hover:bg-gray-50"
+                  ? "bg-neutral-200 text-gray-400 cursor-not-allowed"
+                  : "bg-neutral-200 text-gray-700 border border-gray-300 hover:bg-gray-50"
               }`}
             >
               Next

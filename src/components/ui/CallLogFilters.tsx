@@ -36,7 +36,7 @@ const CallLogFilters: React.FC<CallLogFiltersProps> = ({
       return `${baseClass} bg-emerald-800 text-white shadow-sm`
     }
     
-    return `${baseClass} bg-white text-gray-700 border-gray-300 hover:bg-gray-50 hover:border-gray-400`
+    return `${baseClass} bg-neutral-200 text-gray-700 border-gray-300 hover:bg-gray-50 hover:border-gray-400`
   }
 
   return (
@@ -63,7 +63,7 @@ const CallLogFilters: React.FC<CallLogFiltersProps> = ({
           id="agent-select"
           value={selectedAgent}
           onChange={(e) => onAgentChange(e.target.value)}
-          className="px-3 py-1.5 text-sm border border-gray-300 rounded-full bg-white text-gray-700 hover:border-gray-400 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 transition-colors duration-200 min-w-[150px]"
+          className="px-3 py-1.5 text-sm border border-gray-300 rounded-full bg-neutral-200 text-gray-700 hover:border-gray-400 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 transition-colors duration-200 min-w-[150px]"
         >
           <option value="">All Agents</option>
           {agents.map((agent) => (

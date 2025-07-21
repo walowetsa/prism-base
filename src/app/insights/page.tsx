@@ -11,7 +11,7 @@ const InsightsPage = () => {
   const [callRecords, setCallRecords] = useState<CallRecord[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [filterPeriod, setFilterPeriod] = useState<FilterPeriod>("all");
+  const [filterPeriod, setFilterPeriod] = useState<FilterPeriod>("today");
   const [selectedAgent, setSelectedAgent] = useState<string>("");
 
   // Extract unique agents
