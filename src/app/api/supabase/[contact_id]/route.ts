@@ -1,9 +1,7 @@
-// app/api/supabase/call-logs/[contact_id]/route.ts
 import { createClient } from '@supabase/supabase-js'
 import { NextResponse } from 'next/server'
 import CallRecord from '@/types/CallRecord'
 
-// Initialize Supabase client
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!
 const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY!
 const supabase = createClient(supabaseUrl, supabaseKey)
@@ -22,13 +20,11 @@ export async function GET(
       )
     }
 
-    // Fetch all columns for the specific call record
     const { data, error } = await supabase
       .from('call_records')
-      .select('*') // Select all columns
+      .select('*') 
       .eq('contact_id', contact_id)
-      .single() // Get single record
-
+      .single() 
     if (error) {
       console.error('Supabase error:', error)
       

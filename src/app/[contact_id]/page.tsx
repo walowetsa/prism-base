@@ -1,4 +1,3 @@
-/* eslint-disable @typescript-eslint/no-explicit-any */
 "use client";
 
 import { useState, useEffect } from "react";
@@ -92,31 +91,26 @@ const formatDuration = (
   duration: string | { minutes?: number; seconds: number } | null
 ): string => {
   if (!duration) return "N/A";
-
   try {
-    // If duration is a string, parse it as JSON
     let parsedDuration: { minutes?: number; seconds: number };
-
     if (typeof duration === "string") {
       parsedDuration = JSON.parse(duration);
     } else {
       parsedDuration = duration;
     }
-
-    // Extract seconds and provide default value for minutes
     const { seconds, minutes = 0 } = parsedDuration;
 
-    // Validate that we have valid numbers
+    // Validate numbers
     if (typeof seconds !== "number" || seconds < 0) {
       return "N/A";
     }
 
-    // Validate minutes if it exists
+    // Do minutes exist?
     if (minutes !== undefined && (typeof minutes !== "number" || minutes < 0)) {
       return "N/A";
     }
 
-    // Format the duration
+    // Format
     if (minutes === 0 || minutes === undefined) {
       return `${seconds}s`;
     }
@@ -127,7 +121,9 @@ const formatDuration = (
   }
 };
 
-  // Sentiment Analysis Helper Functions
+  // Helper Func - Sentiment
+  // TODO: fix data type issues (15/07)
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const parseSentimentData = (sentimentAnalysis: any): SentimentData[] => {
     if (!sentimentAnalysis) return [];
 
@@ -149,11 +145,7 @@ const formatDuration = (
 
 const calculateSentimentStats = (sentimentData: SentimentData[]) => {
     if (sentimentData.length === 0) return null;
-
-    // Define valid sentiment types
     type ValidSentiment = 'positive' | 'negative' | 'neutral';
-    
-    // Helper function to check if sentiment is valid
     const isValidSentiment = (sentiment: string): sentiment is ValidSentiment => {
       return ['positive', 'negative', 'neutral'].includes(sentiment);
     };
@@ -164,7 +156,7 @@ const calculateSentimentStats = (sentimentData: SentimentData[]) => {
         
         const normalizedSentiment = item.sentiment.toLowerCase();
         
-        // Only increment if it's a valid sentiment
+        // Increment valid sentiments
         if (isValidSentiment(normalizedSentiment)) {
           acc[normalizedSentiment]++;
         }
@@ -180,7 +172,6 @@ const calculateSentimentStats = (sentimentData: SentimentData[]) => {
           };
         }
         
-        // Only increment speaker sentiment if it's valid
         if (isValidSentiment(normalizedSentiment)) {
           acc.speakers[item.speaker][normalizedSentiment]++;
         }
@@ -435,7 +426,7 @@ const calculateSentimentStats = (sentimentData: SentimentData[]) => {
 
                       return (
                         <div className="space-y-4">
-                          {/* Overall Statistics */}
+                          {/* Stats Overview */}
                           <div className="grid grid-cols-3 gap-3">
                             <div
                               className={`p-3 rounded-lg border ${getSentimentBgColor(
@@ -492,7 +483,7 @@ const calculateSentimentStats = (sentimentData: SentimentData[]) => {
                             </div>
                           </div>
 
-                          {/* Sentiment by Speaker */}
+                          {/* Sentiments */}
                           <div>
                             <h4 className="text-white font-medium mb-2 text-sm">
                               By Speaker
@@ -547,7 +538,7 @@ const calculateSentimentStats = (sentimentData: SentimentData[]) => {
                             </div>
                           </div>
 
-                          {/* Additional Metrics */}
+                          {/* Additional Stuff */}
                           <div className="grid grid-cols-2 gap-3 pt-2 border-t border-neutral-700">
                             <div>
                               <label className="block text-white font-medium text-xs mb-1">
@@ -595,8 +586,6 @@ const calculateSentimentStats = (sentimentData: SentimentData[]) => {
                   Transcript
                 </h2>
               </div>
-
-              {/* Transcript Component */}
               <Transcript
                 data={transcriptData}
                 showConfidence={false}

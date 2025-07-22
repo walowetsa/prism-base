@@ -12,7 +12,7 @@ const Transcript: React.FC<TranscriptProps> = ({
   showTimestamps = true,
   showWordDetails = false 
 }) => {
-  // Helper function to format timestamp (milliseconds to time)
+  // format timestamp (milliseconds to time)
   const formatTime = (milliseconds: number): string => {
     const seconds = Math.floor(milliseconds / 1000);
     const minutes = Math.floor(seconds / 60);
@@ -20,14 +20,12 @@ const Transcript: React.FC<TranscriptProps> = ({
     return `${minutes}:${remainingSeconds.toString().padStart(2, '0')}`;
   };
 
-  // Helper function to get confidence color (dark theme)
   const getConfidenceColor = (confidence: number): string => {
     if (confidence >= 0.9) return 'text-emerald-400';
     if (confidence >= 0.7) return 'text-yellow-400';
     return 'text-red-400';
   };
 
-  // Helper function to get speaker styling (dark theme)
   const getSpeakerStyling = (speakerRole: string) => {
     return speakerRole === 'Agent' 
       ? 'bg-neutral-800 border-l-4 border-emerald-800' 
@@ -49,7 +47,6 @@ const Transcript: React.FC<TranscriptProps> = ({
           key={index} 
           className={`p-3 rounded-lg ${getSpeakerStyling(segment.speakerRole)}`}
         >
-          {/* Speaker Header */}
           <div className="flex items-center justify-between mb-2">
             <div className="flex items-center space-x-2">
               <span className="font-semibold text-neutral-200">
@@ -64,14 +61,12 @@ const Transcript: React.FC<TranscriptProps> = ({
             )}
           </div>
 
-          {/* Main Text */}
           <div className="mb-2">
             <p className="text-neutral-200 leading-relaxed text-sm">
               {segment.text}
             </p>
           </div>
 
-          {/* Word-level details (optional) */}
           {showWordDetails && (
             <div className="mt-3 pt-3 border-t border-neutral-700">
               <details className="cursor-pointer">
@@ -100,7 +95,6 @@ const Transcript: React.FC<TranscriptProps> = ({
         </div>
       ))}
 
-      {/* Transcript Summary */}
       {data.length > 0 && (
         <div className="mt-6 p-3 bg-neutral-800 rounded-lg border border-neutral-700">
           <div className="grid grid-cols-2 gap-4 text-xs">

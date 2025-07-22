@@ -1,15 +1,16 @@
+// TODO: fix data type issues (15/07)
 /* eslint-disable @typescript-eslint/no-explicit-any */
 "use client";
 
 import { useState, useRef, useEffect } from "react";
 import { Send, MessageSquare, AlertCircle } from "lucide-react";
-import ReactMarkdown from 'react-markdown';
+import ReactMarkdown from "react-markdown";
 import CallRecord from "@/types/CallRecord";
 import { TranscriptSegment } from "@/types/Transcription";
 
 interface Message {
   id: string;
-  type: 'user' | 'assistant';
+  type: "user" | "assistant";
   content: string;
   timestamp: Date;
   error?: boolean;
@@ -20,7 +21,7 @@ interface CallDetailChatProps {
   transcriptData?: TranscriptSegment[];
 }
 
-// Custom markdown components for better styling matching the component's design
+// components for markdown support
 const MarkdownComponents = {
   h1: ({ children }: any) => (
     <h1 className="text-lg font-bold mb-2 text-gray-900">{children}</h1>
@@ -35,14 +36,16 @@ const MarkdownComponents = {
     <p className="mb-2 text-gray-900 leading-relaxed">{children}</p>
   ),
   ul: ({ children }: any) => (
-    <ul className="list-disc list-inside mb-2 space-y-1 text-gray-900">{children}</ul>
+    <ul className="list-disc list-inside mb-2 space-y-1 text-gray-900">
+      {children}
+    </ul>
   ),
   ol: ({ children }: any) => (
-    <ol className="list-decimal list-inside mb-2 space-y-1 text-gray-900">{children}</ol>
+    <ol className="list-decimal list-inside mb-2 space-y-1 text-gray-900">
+      {children}
+    </ol>
   ),
-  li: ({ children }: any) => (
-    <li className="text-gray-900">{children}</li>
-  ),
+  li: ({ children }: any) => <li className="text-gray-900">{children}</li>,
   strong: ({ children }: any) => (
     <strong className="font-semibold text-gray-900">{children}</strong>
   ),
@@ -50,16 +53,16 @@ const MarkdownComponents = {
     <em className="italic text-gray-900">{children}</em>
   ),
   code: ({ children }: any) => (
-    <code className="bg-gray-200 px-1 py-0.5 rounded text-sm font-mono text-gray-800">{children}</code>
+    <code className="bg-gray-200 px-1 py-0.5 rounded text-sm font-mono text-gray-800">
+      {children}
+    </code>
   ),
   blockquote: ({ children }: any) => (
     <blockquote className="border-l-4 border-emerald-800 pl-3 italic text-gray-800 mb-2">
       {children}
     </blockquote>
   ),
-  hr: () => (
-    <hr className="my-3 border-gray-300" />
-  ),
+  hr: () => <hr className="my-3 border-gray-300" />,
   table: ({ children }: any) => (
     <div className="overflow-x-auto mb-2">
       <table className="min-w-full border-collapse border border-gray-300 text-sm">
@@ -73,38 +76,37 @@ const MarkdownComponents = {
     </th>
   ),
   td: ({ children }: any) => (
-    <td className="border border-gray-300 px-2 py-1 text-gray-900 text-xs">{children}</td>
+    <td className="border border-gray-300 px-2 py-1 text-gray-900 text-xs">
+      {children}
+    </td>
   ),
 };
 
-// Function to post-process AI response for better formatting
+// response formatting
 const formatAIResponse = (content: string): string => {
-  // Remove excessive line breaks
-  content = content.replace(/\n{3,}/g, '\n\n');
-  
-  // Ensure proper spacing around headers
-  content = content.replace(/^(#{1,3})\s*(.+)$/gm, '$1 $2\n');
-  
-  // Clean up bullet points
-  content = content.replace(/^[•·-]\s*/gm, '• ');
-  
-  // Add proper spacing around sections
-  content = content.replace(/^(#{1,3}.*?)$/gm, '\n$1');
-  
+  content = content.replace(/\n{3,}/g, "\n\n");
+
+  content = content.replace(/^(#{1,3})\s*(.+)$/gm, "$1 $2\n");
+
+  content = content.replace(/^[•·-]\s*/gm, "• ");
+
+  content = content.replace(/^(#{1,3}.*?)$/gm, "\n$1");
+
   return content.trim();
 };
 
 const CallDetailChat: React.FC<CallDetailChatProps> = ({
   callRecord,
-  transcriptData = []
+  transcriptData = [],
 }) => {
   const [messages, setMessages] = useState<Message[]>([
     {
-      id: '1',
-      type: 'assistant',
-      content: "Welcome to PRISM - I can help you analyse this call. What would you like to know?",
-      timestamp: new Date()
-    }
+      id: "1",
+      type: "assistant",
+      content:
+        "Welcome to PRISM - I can help you analyse this call. What would you like to know?",
+      timestamp: new Date(),
+    },
   ]);
   const [inputValue, setInputValue] = useState("");
   const [isTyping, setIsTyping] = useState(false);
@@ -118,8 +120,10 @@ const CallDetailChat: React.FC<CallDetailChatProps> = ({
     scrollToBottom();
   }, [messages]);
 
-  // Prepare call record data for AI analysis
-  const prepareCallDataForAI = (record: CallRecord, transcript: TranscriptSegment[]) => {
+  const prepareCallDataForAI = (
+    record: CallRecord,
+    transcript: TranscriptSegment[]
+  ) => {
     return {
       callRecord: {
         id: record.id,
@@ -138,17 +142,17 @@ const CallDetailChat: React.FC<CallDetailChatProps> = ({
         call_summary: record.call_summary,
         customer_cli: record.customer_cli,
         processed_at: record.processed_at,
-        transcript_text: record.transcript_text
+        transcript_text: record.transcript_text,
       },
       transcript: transcript,
       callInfo: {
         hasTranscript: !!record.transcript_text || transcript.length > 0,
-        hasSentiment: !!(record.sentiment_analysis?.length),
-        hasEntities: !!(record.entities?.length),
+        hasSentiment: !!record.sentiment_analysis?.length,
+        hasEntities: !!record.entities?.length,
         hasSummary: !!record.call_summary,
         transcriptLength: transcript.length,
-        speakerCount: new Set(transcript.map(t => t.speaker)).size
-      }
+        speakerCount: new Set(transcript.map((t) => t.speaker)).size,
+      },
     };
   };
 
@@ -157,26 +161,26 @@ const CallDetailChat: React.FC<CallDetailChatProps> = ({
 
     const userMessage: Message = {
       id: Date.now().toString(),
-      type: 'user',
+      type: "user",
       content: inputValue.trim(),
-      timestamp: new Date()
+      timestamp: new Date(),
     };
 
-    setMessages(prev => [...prev, userMessage]);
+    setMessages((prev) => [...prev, userMessage]);
     setInputValue("");
     setIsTyping(true);
 
     try {
       const preparedData = prepareCallDataForAI(callRecord, transcriptData);
-      
-      const response = await fetch('/api/openai/query-call-detail', {
-        method: 'POST',
+
+      const response = await fetch("/api/openai/query-call-detail", {
+        method: "POST",
         headers: {
-          'Content-Type': 'application/json',
+          "Content-Type": "application/json",
         },
         body: JSON.stringify({
           query: userMessage.content,
-          callData: preparedData
+          callData: preparedData,
         }),
       });
 
@@ -185,75 +189,79 @@ const CallDetailChat: React.FC<CallDetailChatProps> = ({
       }
 
       const data = await response.json();
-      
+
       if (data.error) {
         throw new Error(data.error);
       }
 
-      // Format the response content
       const formattedContent = formatAIResponse(data.response);
 
       const assistantMessage: Message = {
         id: (Date.now() + 1).toString(),
-        type: 'assistant',
+        type: "assistant",
         content: formattedContent,
-        timestamp: new Date()
+        timestamp: new Date(),
       };
 
-      setMessages(prev => [...prev, assistantMessage]);
+      setMessages((prev) => [...prev, assistantMessage]);
     } catch (error) {
-      console.error('Error calling OpenAI:', error);
-      
+      console.error("Error calling OpenAI:", error);
+
       const errorMessage: Message = {
         id: (Date.now() + 1).toString(),
-        type: 'assistant',
-        content: "I apologize, but I'm having trouble processing your request right now. This could be due to:\n\n• Network connectivity issues\n• OpenAI API rate limits\n• Server configuration issues\n\nPlease try again in a moment, or contact your administrator if the problem persists.",
+        type: "assistant",
+        content:
+          "I apologize, but I'm having trouble processing your request right now. This could be due to:\n\n• Network connectivity issues\n• OpenAI API rate limits\n• Server configuration issues\n\nPlease try again in a moment, or contact your administrator if the problem persists.",
         timestamp: new Date(),
-        error: true
+        error: true,
       };
 
-      setMessages(prev => [...prev, errorMessage]);
+      setMessages((prev) => [...prev, errorMessage]);
     } finally {
       setIsTyping(false);
     }
   };
 
   const handleKeyPress = (e: React.KeyboardEvent) => {
-    if (e.key === 'Enter' && !e.shiftKey) {
+    if (e.key === "Enter" && !e.shiftKey) {
       e.preventDefault();
       handleSendMessage();
     }
   };
 
   const formatTimestamp = (timestamp: Date) => {
-    return timestamp.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+    return timestamp.toLocaleTimeString([], {
+      hour: "2-digit",
+      minute: "2-digit",
+    });
   };
 
   const quickPrompts = [
     "Summarize this call",
-    "Analyse customer sentiment", 
+    "Analyse customer sentiment",
     "Extract key topics discussed",
     "Evaluate agent performance",
-    "Identify action items"
+    "Identify action items",
   ];
 
   return (
     <div className="flex flex-col h-full bg-black rounded-lg shadow-sm">
-      {/* Header */}
       <div className="flex items-center gap-3 p-4 border-b bg-neutral-800 rounded-t-lg">
         <div className="flex items-center justify-center w-8 h-8 bg-emerald-800 rounded-full">
           <MessageSquare className="w-4 h-4 text-white" />
         </div>
         <div>
-          <h3 className="font-semibold text-neutral-200">PRISM - Call Analysis</h3>
+          <h3 className="font-semibold text-neutral-200">
+            PRISM - Call Analysis
+          </h3>
           <p className="text-xs text-gray-500 flex items-center gap-1">
             <span className="w-2 h-2 bg-green-400 rounded-full"></span>
-            {callRecord.agent_username || 'Agent'} • {callRecord.queue_name || 'Queue'}
+            {callRecord.agent_username || "Agent"} •{" "}
+            {callRecord.queue_name || "Queue"}
           </p>
         </div>
       </div>
 
-      {/* Messages */}
       <div className="flex-1 overflow-y-auto p-4 space-y-4 bg-neutral-800">
         {!callRecord && (
           <div className="flex items-center gap-3 p-4 bg-amber-50 border border-amber-200 rounded-lg">
@@ -267,20 +275,25 @@ const CallDetailChat: React.FC<CallDetailChatProps> = ({
         {messages.map((message) => (
           <div
             key={message.id}
-            className={`flex gap-3 ${message.type === 'user' ? 'justify-end' : 'justify-start'}`}
+            className={`flex gap-3 ${
+              message.type === "user" ? "justify-end" : "justify-start"
+            }`}
           >
-            
-            <div className={`max-w-[85%] ${message.type === 'user' ? 'order-1' : ''}`}>
+            <div
+              className={`max-w-[85%] ${
+                message.type === "user" ? "order-1" : ""
+              }`}
+            >
               <div
                 className={`rounded-lg px-3 py-2 text-xs ${
-                  message.type === 'user'
-                    ? 'bg-emerald-800 text-white'
+                  message.type === "user"
+                    ? "bg-emerald-800 text-white"
                     : message.error
-                    ? 'bg-red-50 text-red-900 border border-red-200'
-                    : 'bg-gray-100 text-gray-900'
+                    ? "bg-red-50 text-red-900 border border-red-200"
+                    : "bg-gray-100 text-gray-900"
                 }`}
               >
-                {message.type === 'assistant' && !message.error ? (
+                {message.type === "assistant" && !message.error ? (
                   <div className="prose prose-sm max-w-none text-xs">
                     <ReactMarkdown components={MarkdownComponents}>
                       {message.content}
@@ -292,9 +305,11 @@ const CallDetailChat: React.FC<CallDetailChatProps> = ({
                   </div>
                 )}
               </div>
-              <div className={`text-xs text-gray-500 mt-1 ${
-                message.type === 'user' ? 'text-right' : 'text-left'
-              }`}>
+              <div
+                className={`text-xs text-gray-500 mt-1 ${
+                  message.type === "user" ? "text-right" : "text-left"
+                }`}
+              >
                 {formatTimestamp(message.timestamp)}
               </div>
             </div>
@@ -307,17 +322,22 @@ const CallDetailChat: React.FC<CallDetailChatProps> = ({
               <div className="flex items-center gap-1">
                 <div className="text-xs text-gray-600 mr-2">Thinking</div>
                 <div className="w-2 h-2 bg-emerald-800 rounded-full animate-bounce"></div>
-                <div className="w-2 h-2 bg-emerald-800 rounded-full animate-bounce" style={{ animationDelay: '0.1s' }}></div>
-                <div className="w-2 h-2 bg-emerald-800 rounded-full animate-bounce" style={{ animationDelay: '0.2s' }}></div>
+                <div
+                  className="w-2 h-2 bg-emerald-800 rounded-full animate-bounce"
+                  style={{ animationDelay: "0.1s" }}
+                ></div>
+                <div
+                  className="w-2 h-2 bg-emerald-800 rounded-full animate-bounce"
+                  style={{ animationDelay: "0.2s" }}
+                ></div>
               </div>
             </div>
           </div>
         )}
-        
+
         <div ref={messagesEndRef} />
       </div>
 
-      {/* Input */}
       <div className="p-4 border-t border-black bg-neutral-800">
         <div className="flex gap-2">
           <input
@@ -341,8 +361,7 @@ const CallDetailChat: React.FC<CallDetailChatProps> = ({
             <Send className="w-4 h-4" />
           </button>
         </div>
-        
-        {/* Quick action buttons */}
+
         {callRecord && (
           <div className="flex gap-2 mt-2 flex-wrap">
             {quickPrompts.map((prompt) => (
@@ -357,13 +376,18 @@ const CallDetailChat: React.FC<CallDetailChatProps> = ({
             ))}
           </div>
         )}
-        
+
         {callRecord && (
           <div className="text-xs text-gray-500 mt-2 flex items-center justify-between">
             <span>
-              Analysing call {callRecord.id} • 
-              {transcriptData.length > 0 ? ` ${transcriptData.length} transcript segments` : ' No transcript'} • 
-              {callRecord.sentiment_analysis?.length ? ' Has sentiment data' : ' No sentiment data'}
+              Analysing call {callRecord.id} •
+              {transcriptData.length > 0
+                ? ` ${transcriptData.length} transcript segments`
+                : " No transcript"}{" "}
+              •
+              {callRecord.sentiment_analysis?.length
+                ? " Has sentiment data"
+                : " No sentiment data"}
             </span>
           </div>
         )}

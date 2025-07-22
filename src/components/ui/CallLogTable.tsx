@@ -34,7 +34,6 @@ const CallLogTable: React.FC<CallLogTableProps> = ({ className }) => {
 
   const recordsPerPage = 100;
 
-  // Extract unique agents from call records
   const uniqueAgents = useMemo(() => {
     const agents = callRecords
       .map((record) => record.agent_username)
@@ -43,18 +42,15 @@ const CallLogTable: React.FC<CallLogTableProps> = ({ className }) => {
     return agents as string[];
   }, [callRecords]);
 
-  // Filter records based on initiation_timestamp and selected agent
   const filteredRecords = useMemo(() => {
     let filtered = callRecords;
 
-    // Filter by agent if selected
     if (selectedAgent) {
       filtered = filtered.filter(
         (record) => record.agent_username === selectedAgent
       );
     }
 
-    // Filter by time period
     if (filterPeriod === "all") return filtered;
 
     const now = new Date();
@@ -95,7 +91,6 @@ const CallLogTable: React.FC<CallLogTableProps> = ({ className }) => {
     });
   }, [callRecords, filterPeriod, selectedAgent]);
 
-  // Sort filtered records based on current sort state
   const sortedRecords = useMemo(() => {
     if (!sortState.field) return filteredRecords;
 
@@ -134,7 +129,6 @@ const CallLogTable: React.FC<CallLogTableProps> = ({ className }) => {
 
   const totalPages = Math.ceil(sortedRecords.length / recordsPerPage);
 
-  // Calculate current records to display from sorted results
   const startIndex = (currentPage - 1) * recordsPerPage;
   const endIndex = startIndex + recordsPerPage;
   const currentRecords = sortedRecords.slice(startIndex, endIndex);
@@ -143,7 +137,7 @@ const CallLogTable: React.FC<CallLogTableProps> = ({ className }) => {
     fetchCallRecords();
   }, []);
 
-  // Close dropdown when clicking outside
+  // close dropdown
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
       if (
@@ -206,49 +200,47 @@ const CallLogTable: React.FC<CallLogTableProps> = ({ className }) => {
     }
   };
 
-const formatCallDuration = (
-  duration: string | { minutes?: number; seconds: number } | null
-): string => {
-  if (!duration) return "N/A";
+  const formatCallDuration = (
+    duration: string | { minutes?: number; seconds: number } | null
+  ): string => {
+    if (!duration) return "N/A";
 
-  try {
-    // If duration is a string, parse it as JSON
-    let parsedDuration: { minutes?: number; seconds: number };
+    try {
+      let parsedDuration: { minutes?: number; seconds: number };
 
-    if (typeof duration === "string") {
-      parsedDuration = JSON.parse(duration);
-    } else {
-      parsedDuration = duration;
-    }
+      if (typeof duration === "string") {
+        parsedDuration = JSON.parse(duration);
+      } else {
+        parsedDuration = duration;
+      }
 
-    // Extract seconds and provide default value for minutes
-    const { seconds, minutes = 0 } = parsedDuration;
+      const { seconds, minutes = 0 } = parsedDuration;
 
-    // Validate that we have valid numbers
-    if (typeof seconds !== "number" || seconds < 0) {
+      if (typeof seconds !== "number" || seconds < 0) {
+        return "N/A";
+      }
+
+      if (
+        minutes !== undefined &&
+        (typeof minutes !== "number" || minutes < 0)
+      ) {
+        return "N/A";
+      }
+
+      if (minutes === 0 || minutes === undefined) {
+        return `${seconds}s`;
+      }
+      return `${minutes}m ${seconds}s`;
+    } catch (error) {
+      console.error("Error parsing call duration:", error);
       return "N/A";
     }
-
-    // Validate minutes if it exists
-    if (minutes !== undefined && (typeof minutes !== "number" || minutes < 0)) {
-      return "N/A";
-    }
-
-    // Format the duration
-    if (minutes === 0 || minutes === undefined) {
-      return `${seconds}s`;
-    }
-    return `${minutes}m ${seconds}s`;
-  } catch (error) {
-    console.error("Error parsing call duration:", error);
-    return "N/A";
-  }
-};
+  };
 
   const handlePageChange = (page: number) => {
     if (page >= 1 && page <= totalPages) {
       setCurrentPage(page);
-      setOpenDropdownId(null); // Close dropdown when changing pages
+      setOpenDropdownId(null);
     }
   };
 
@@ -293,7 +285,6 @@ const formatCallDuration = (
 
     setSortState((prev) => {
       if (prev.field === field) {
-        //toggle direction
         return {
           field,
           direction: prev.direction === "asc" ? "desc" : "asc",
@@ -306,18 +297,17 @@ const formatCallDuration = (
       }
     });
 
-    // Reset to first page
     setCurrentPage(1);
   };
 
   const handleFilterChange = (filter: FilterPeriod) => {
     setFilterPeriod(filter);
-    setCurrentPage(1); // Reset to first page
+    setCurrentPage(1);
   };
 
   const handleAgentChange = (agent: string) => {
     setSelectedAgent(agent);
-    setCurrentPage(1); // Reset to first page
+    setCurrentPage(1);
   };
 
   const getSortIcon = (field: SortField) => {
@@ -333,9 +323,9 @@ const formatCallDuration = (
   };
 
   const successfulOutcomes = [
-    'Conversation - Lead Generated: New Business',
-    'Conversation - Lead Generated: X Sell'
-  ]
+    "Conversation - Lead Generated: New Business",
+    "Conversation - Lead Generated: X Sell",
+  ];
 
   const isSuccessfulOutcome = (dispositionTitle: string | null): boolean => {
     if (!dispositionTitle) return false;
@@ -385,7 +375,6 @@ const formatCallDuration = (
 
   return (
     <div className={`w-full ${className}`}>
-      {/* Table Header Info */}
       <div className="mb-4 flex justify-between items-center gap-x-4">
         <div className="text-sm text-gray-600 flex items-center gap-x-4">
           <RefreshButton onRefresh={fetchCallRecords} disabled={loading} />
@@ -411,7 +400,7 @@ const formatCallDuration = (
         </div>
       </div>
 
-      {/* Table Container */}
+      {/* body */}
       <div className="bg-neutral-800 shadow-sm rounded-lg border border-neutral-800 overflow-hidden">
         <div className="overflow-auto max-h-[75vh]">
           <table className="w-full table-fixed">
@@ -449,9 +438,7 @@ const formatCallDuration = (
                     </span>
                   </div>
                 </th>
-                <th className="px-4 py-3 text-center text-xs font-medium text-emerald-800 uppercase tracking-wider w-16">
-                  
-                </th>
+                <th className="px-4 py-3 text-center text-xs font-medium text-emerald-800 uppercase tracking-wider w-16"></th>
                 <th className="px-4 py-3 text-left text-xs font-medium text-emerald-800 uppercase tracking-wider">
                   Summary
                 </th>
@@ -478,7 +465,10 @@ const formatCallDuration = (
                   </td>
                   <td className="px-4 py-3 text-sm text-white w-16 text-center">
                     {isSuccessfulOutcome(record.disposition_title) && (
-                      <span className="text-green-400 text-lg" title="Successful outcome">
+                      <span
+                        className="text-green-400 text-lg"
+                        title="Successful outcome"
+                      >
                         ✓
                       </span>
                     )}
@@ -532,7 +522,7 @@ const formatCallDuration = (
         </div>
       </div>
 
-      {/* Pagination */}
+      {/* pagination */}
       {totalPages > 1 && (
         <div className="mt-6 flex items-center justify-between">
           <div className="flex items-center space-x-2">

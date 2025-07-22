@@ -2,10 +2,12 @@
 
 import { useState, useEffect, useMemo } from "react";
 import CallRecord from "@/types/CallRecord";
-import CallLogFilters, { FilterPeriod } from "../../components/ui/CallLogFilters";
+import CallLogFilters, {
+  FilterPeriod,
+} from "../../components/ui/CallLogFilters";
 import RefreshButton from "../../components/ui/RefreshButton";
 import InsightsStatsDashboard from "../../components/dashboards/InsightsStatsDashboard";
-import CallRecordsChat from "../../components/ai/CallRecordsChat"; 
+import CallRecordsChat from "../../components/ai/CallRecordsChat";
 
 const InsightsPage = () => {
   const [callRecords, setCallRecords] = useState<CallRecord[]>([]);
@@ -14,7 +16,7 @@ const InsightsPage = () => {
   const [filterPeriod, setFilterPeriod] = useState<FilterPeriod>("today");
   const [selectedAgent, setSelectedAgent] = useState<string>("");
 
-  // Extract unique agents
+  // get agents
   const uniqueAgents = useMemo(() => {
     const agents = callRecords
       .map((record) => record.agent_username)
@@ -23,18 +25,15 @@ const InsightsPage = () => {
     return agents as string[];
   }, [callRecords]);
 
-  // Filter records based on initiation_timestamp and selected agent
   const filteredRecords = useMemo(() => {
     let filtered = callRecords;
 
-    // Filter by agent if selected
     if (selectedAgent) {
       filtered = filtered.filter(
         (record) => record.agent_username === selectedAgent
       );
     }
 
-    // Filter by time period
     if (filterPeriod === "all") return filtered;
 
     const now = new Date();
@@ -140,7 +139,7 @@ const InsightsPage = () => {
           <RefreshButton onRefresh={fetchCallRecords} disabled={loading} />
           {!loading && (
             <>
-              Analyzing {filteredRecords.length} of {callRecords.length} records
+              Analysing {filteredRecords.length} of {callRecords.length} records
             </>
           )}
         </div>

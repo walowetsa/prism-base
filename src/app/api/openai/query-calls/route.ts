@@ -1,209 +1,234 @@
 /* eslint-disable @typescript-eslint/no-unsafe-function-type */
-/* eslint-disable @typescript-eslint/no-unused-vars */
 /* eslint-disable @typescript-eslint/no-explicit-any */
-import { NextRequest, NextResponse } from 'next/server';
-import OpenAI from 'openai';
+import { NextRequest, NextResponse } from "next/server";
+import OpenAI from "openai";
 
 const openai = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY,
 });
 
-// Enhanced rate limiting with different tiers
+// Rate limitiing
 const rateLimitMap = new Map<string, { count: number; resetTime: number }>();
-const requestQueue = new Map<string, Array<{ resolve: Function; reject: Function; request: any }>>();
+// TODO: fix data type issues (15/07)
+// eslint-disable-next-line @typescript-eslint/no-unsafe-function-type, @typescript-eslint/no-explicit-any
+const requestQueue = new Map<
+  string,
+  Array<{ resolve: Function; reject: Function; request: any }>
+>();
 
-// Token estimation (rough approximation)
 const estimateTokens = (text: string): number => {
   return Math.ceil(text.length / 4); // Rough estimation: 1 token ≈ 4 characters
 };
 
-// Smart data sampling for large datasets
+// Data sampling for big boy datasets
+// TODO: fix data type issues (15/07)
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
 const sampleData = (records: any[], maxSamples: number = 500): any[] => {
   if (records.length <= maxSamples) return records;
-  
+
   // Stratified sampling to maintain data distribution
   const step = Math.floor(records.length / maxSamples);
   const sampled = [];
-  
+
   for (let i = 0; i < records.length; i += step) {
     if (sampled.length < maxSamples) {
       sampled.push(records[i]);
     }
   }
-  
+
   return sampled;
 };
 
-// Advanced data aggregation with smart compression
+// Data aggregation
+// TODO: fix data type issues (15/07)
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
 const compressCallData = (callData: any, queryType: string): any => {
   const { data } = callData;
-  
+
   // Different compression strategies based on query type
   switch (queryType) {
-    case 'disposition':
+    case "disposition":
       return {
-        type: 'disposition',
+        type: "disposition",
         data: {
           totalRecords: data.totalRecords,
           dispositions: data.dispositions,
-          dateRange: data.dateRange
-        }
+          dateRange: data.dateRange,
+        },
       };
-      
-    case 'agent_performance':
-      // Compress agent data to key metrics only
+
+    case "agent_performance":
+      // set agent data to key metrics only
+      // TODO: fix data type issues (15/07)
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const compressedAgents: any = {};
-      Object.entries(data.agentMetrics || {}).forEach(([agent, metrics]: [string, any]) => {
-        compressedAgents[agent] = {
-          totalCalls: metrics.totalCalls,
-          avgDuration: metrics.totalDuration / metrics.totalCalls,
-          avgHoldTime: metrics.totalHoldTime / metrics.totalCalls,
-          topDisposition: Object.entries(metrics.dispositions)
-            .sort(([,a], [,b]) => (b as number) - (a as number))[0]?.[0],
-          successRate: calculateSuccessRate(metrics.dispositions)
-        };
-      });
-      
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      Object.entries(data.agentMetrics || {}).forEach(
+        ([agent, metrics]: [string, any]) => {
+          compressedAgents[agent] = {
+            totalCalls: metrics.totalCalls,
+            avgDuration: metrics.totalDuration / metrics.totalCalls,
+            avgHoldTime: metrics.totalHoldTime / metrics.totalCalls,
+            topDisposition: Object.entries(metrics.dispositions).sort(
+              ([, a], [, b]) => (b as number) - (a as number)
+            )[0]?.[0],
+            successRate: calculateSuccessRate(metrics.dispositions),
+          };
+        }
+      );
+
       return {
-        type: 'agent_performance',
+        type: "agent_performance",
         data: {
           totalRecords: data.totalRecords,
           agentMetrics: compressedAgents,
-          totalAgents: data.totalAgents
-        }
+          totalAgents: data.totalAgents,
+        },
       };
-      
-    case 'summary':
+
+    case "summary":
       return {
-        type: 'summary',
+        type: "summary",
         data: {
           overview: data.overview,
           totalRecords: data.totalRecords,
-          dateRange: data.dateRange
-        }
+          dateRange: data.dateRange,
+        },
       };
-      
+
     default:
-      // For general queries, use statistical sampling
       const sampleRecords = sampleData(data.sampleRecords || [], 20);
       return {
-        type: 'general',
+        type: "general",
         data: {
           sampleRecords,
           quickStats: data.quickStats,
           totalRecords: data.totalRecords,
-          samplingNote: `Analysis based on ${sampleRecords.length} representative samples from ${data.totalRecords} total records`
-        }
+          samplingNote: `Analysis based on ${sampleRecords.length} representative samples from ${data.totalRecords} total records`,
+        },
       };
   }
 };
 
-// Calculate success rate from dispositions
 const calculateSuccessRate = (dispositions: Record<string, number>): number => {
-  const total = Object.values(dispositions).reduce((sum, count) => sum + count, 0);
+  const total = Object.values(dispositions).reduce(
+    (sum, count) => sum + count,
+    0
+  );
   const successful = Object.entries(dispositions)
-    .filter(([disp]) => 
-      disp.toLowerCase().includes('resolved') || 
-      disp.toLowerCase().includes('completed') ||
-      disp.toLowerCase().includes('satisfied')
+    .filter(
+      ([disp]) =>
+        disp.toLowerCase().includes("resolved") ||
+        disp.toLowerCase().includes("completed") ||
+        disp.toLowerCase().includes("satisfied")
     )
     .reduce((sum, [, count]) => sum + count, 0);
-    
+
   return total > 0 ? (successful / total) * 100 : 0;
 };
 
-// Queue management for large requests
+// Queuing stuff
 const processQueue = async (clientIP: string) => {
   const queue = requestQueue.get(clientIP) || [];
   if (queue.length === 0) return;
-  
+
   const { resolve, reject, request } = queue.shift()!;
   requestQueue.set(clientIP, queue);
-  
+
   try {
     const result = await processLargeRequest(request);
     resolve(result);
   } catch (error) {
     reject(error);
   }
-  
-  // Process next in queue after delay
+
+  // next in queue
   if (queue.length > 0) {
     setTimeout(() => processQueue(clientIP), 2000);
   }
 };
 
-// Process large requests in chunks
+// Chunking
+// TODO: fix data type issues (15/07)
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
 const processLargeRequest = async (requestData: any): Promise<any> => {
   const { query, callData, queryType } = requestData;
-  
-  // Compress data first
+
+  // compress
   const compressedData = compressCallData(callData, queryType);
   const dataString = JSON.stringify(compressedData);
   const estimatedTokens = estimateTokens(dataString);
-  
-  // If still too large, use chunking strategy
+
+  // use chunking strategy
   if (estimatedTokens > 8000) {
     return await processWithChunking(query, callData, queryType);
   }
-  
-  // Normal processing
+
   return await processSingleRequest(query, compressedData, queryType);
 };
-
-// Chunking strategy for very large datasets
-const processWithChunking = async (query: string, callData: any, queryType: string) => {
+// TODO: fix data type issues (15/07)
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+const processWithChunking = async (
+  query: string,
+  callData: any,
+  queryType: string
+) => {
   const { data } = callData;
   const chunkSize = 50; // Process 50 records at a time
   const chunks = [];
-  
+
   if (data.sampleRecords && data.sampleRecords.length > chunkSize) {
     for (let i = 0; i < data.sampleRecords.length; i += chunkSize) {
       chunks.push(data.sampleRecords.slice(i, i + chunkSize));
     }
   } else {
-    // For non-sample data, create synthetic chunks based on aggregated data
     chunks.push(data);
   }
-  
+
   const chunkResults = [];
-  
-  for (const chunk of chunks.slice(0, 3)) { // Limit to 3 chunks to avoid excessive API calls
+
+  for (const chunk of chunks.slice(0, 3)) {
+    // limit === 3 chunks to avoid too many API calls
     const chunkData = {
       type: callData.type,
-      data: Array.isArray(chunk) ? { sampleRecords: chunk, totalRecords: data.totalRecords } : chunk
+      data: Array.isArray(chunk)
+        ? { sampleRecords: chunk, totalRecords: data.totalRecords }
+        : chunk,
     };
-    
+
     try {
       const result = await processSingleRequest(
-        `${query} (analysing subset of data)`, 
-        chunkData, 
+        `${query} (analysing subset of data)`,
+        chunkData,
         queryType
       );
       chunkResults.push(result);
     } catch (error) {
-      console.warn('Chunk processing failed:', error);
+      console.warn("Chunk processing failed:", error);
     }
   }
-  
-  // Combine results
+
   if (chunkResults.length === 0) {
-    throw new Error('Unable to process data chunks');
+    throw new Error("Unable to process data chunks");
   }
-  
-  // Use the first successful result and add a note about chunking
+
   const combinedResult = chunkResults[0];
   combinedResult.response += `\n\n*Note: Analysis based on representative data samples due to large dataset size (${data.totalRecords} total records).*`;
-  
+
   return combinedResult;
 };
 
-// Single request processing
-const processSingleRequest = async (query: string, callData: any, queryType: string) => {
+// TODO: fix data type issues (15/07)
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+const processSingleRequest = async (
+  query: string,
+  callData: any,
+  queryType: string
+) => {
   const systemPrompt = generateSystemPrompt(queryType, {
     type: callData.type,
     recordCount: callData.data.totalRecords || 0,
-    queryType
+    queryType,
   });
 
   const userPrompt = `Query: "${query}"
@@ -214,14 +239,17 @@ ${JSON.stringify(callData.data, null, 2)}
 Please provide a comprehensive analysis that directly addresses the query with specific insights, metrics, and actionable recommendations.`;
 
   // Choose model and token limits based on complexity
-  const model = queryType === 'summary' || queryType === 'agent_performance' ? 'gpt-4o' : 'gpt-4o-mini';
-  const maxTokens = queryType === 'summary' ? 3000 : 2000;
+  const model =
+    queryType === "summary" || queryType === "agent_performance"
+      ? "gpt-4o"
+      : "gpt-4o-mini";
+  const maxTokens = queryType === "summary" ? 3000 : 2000;
 
   const completion = await openai.chat.completions.create({
     model,
     messages: [
-      { role: 'system', content: systemPrompt },
-      { role: 'user', content: userPrompt }
+      { role: "system", content: systemPrompt },
+      { role: "user", content: userPrompt },
     ],
     max_tokens: maxTokens,
     temperature: 0.1,
@@ -235,16 +263,17 @@ Please provide a comprehensive analysis that directly addresses the query with s
       queryType,
       tokensUsed: completion.usage?.total_tokens,
       model,
-      dataPoints: callData.data.totalRecords || 0
-    }
+      dataPoints: callData.data.totalRecords || 0,
+    },
   };
 };
 
-// Enhanced rate limiting with queue support
-const checkRateLimit = (identifier: string): { allowed: boolean; shouldQueue: boolean } => {
+const checkRateLimit = (
+  identifier: string
+): { allowed: boolean; shouldQueue: boolean } => {
   const now = Date.now();
   const windowMs = 60 * 1000;
-  const maxRequests = 15; // Reduced from 20 for safety
+  const maxRequests = 15;
   const queueLimit = 5;
 
   const current = rateLimitMap.get(identifier);
@@ -270,7 +299,8 @@ const checkRateLimit = (identifier: string): { allowed: boolean; shouldQueue: bo
   return { allowed: true, shouldQueue: false };
 };
 
-// Generate system prompts (keeping your existing function)
+// TODO: fix data type issues (15/07)
+// eslint-disable-next-line @typescript-eslint/no-unused-vars, @typescript-eslint/no-explicit-any
 const generateSystemPrompt = (queryType: string, dataInfo: any): string => {
   const basePrompt = `You are PRISM, an expert call center analytics AI assistant. You provide actionable insights with specific numbers and percentages.
 
@@ -291,36 +321,42 @@ IMPORTANT GUIDELINES:
 
 export async function POST(request: NextRequest) {
   try {
-    const { query, callData, queryType = 'general' } = await request.json();
+    const { query, callData, queryType = "general" } = await request.json();
 
     if (!query || !callData) {
       return NextResponse.json(
-        { error: 'Query and call data are required' },
+        { error: "Query and call data are required" },
         { status: 400 }
       );
     }
 
-    const clientIP = request.headers.get('x-forwarded-for') || 
-                    request.headers.get('x-real-ip') || 
-                    'unknown';
+    const clientIP =
+      request.headers.get("x-forwarded-for") ||
+      request.headers.get("x-real-ip") ||
+      "unknown";
 
     const rateCheck = checkRateLimit(clientIP);
-    
+
     if (!rateCheck.allowed) {
       if (rateCheck.shouldQueue) {
         // Add to queue
-        return new Promise((resolve, reject) => {
+        return new Promise((resolve) => {
           const queue = requestQueue.get(clientIP) || [];
           queue.push({
+            // TODO: fix data type issues (15/07)
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
             resolve: (result: any) => resolve(NextResponse.json(result)),
-            reject: (error: any) => resolve(NextResponse.json(
-              { error: 'Request failed in queue', retryable: true },
-              { status: 500 }
-            )),
-            request: { query, callData, queryType }
+            reject: () =>
+              resolve(
+                NextResponse.json(
+                  { error: "Request failed in queue", retryable: true },
+                  { status: 500 }
+                )
+              ),
+            request: { query, callData, queryType },
           });
           requestQueue.set(clientIP, queue);
-          
+
           // Start processing queue if not already running
           if (queue.length === 1) {
             setTimeout(() => processQueue(clientIP), 1000);
@@ -328,9 +364,10 @@ export async function POST(request: NextRequest) {
         });
       } else {
         return NextResponse.json(
-          { 
-            error: 'Rate limit exceeded and queue is full. Please wait before making another request.',
-            retryable: true 
+          {
+            error:
+              "Rate limit exceeded and queue is full. Please wait before making another request.",
+            retryable: true,
           },
           { status: 429 }
         );
@@ -339,40 +376,48 @@ export async function POST(request: NextRequest) {
 
     // Process the request
     const result = await processLargeRequest({ query, callData, queryType });
-    
-    console.log(`✅ Query processed: ${queryType} | Tokens: ${result.metadata?.tokensUsed} | Model: ${result.metadata?.model}`);
+
+    console.log(
+      `✅ Query processed: ${queryType} | Tokens: ${result.metadata?.tokensUsed} | Model: ${result.metadata?.model}`
+    );
 
     return NextResponse.json(result);
-
+    // TODO: fix data type issues (15/07)
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
   } catch (error: any) {
-    console.error('❌ Error calling OpenAI:', error);
+    console.error("❌ Error calling OpenAI:", error);
 
     // Enhanced error handling
     if (error?.status === 429) {
       return NextResponse.json(
-        { 
-          error: 'AI service is currently experiencing high demand. The request will be automatically retried.',
-          retryable: true
+        {
+          error:
+            "AI service is currently experiencing high demand. The request will be automatically retried.",
+          retryable: true,
         },
         { status: 429 }
       );
     }
 
-    if (error?.code === 'context_length_exceeded' || error?.status === 413) {
+    if (error?.code === "context_length_exceeded" || error?.status === 413) {
       return NextResponse.json(
-        { 
-          error: 'Dataset too large for analysis. Try filtering your data or asking a more specific question.',
+        {
+          error:
+            "Dataset too large for analysis. Try filtering your data or asking a more specific question.",
           retryable: false,
-          suggestion: 'Consider using filters to reduce your dataset size or ask about specific metrics.'
+          suggestion:
+            "Consider using filters to reduce your dataset size or ask about specific metrics.",
         },
         { status: 413 }
       );
     }
 
     return NextResponse.json(
-      { 
-        error: `Analysis failed: ${error.message || 'Unknown error'}. Please try again or contact support if the problem persists.`,
-        retryable: true
+      {
+        error: `Analysis failed: ${
+          error.message || "Unknown error"
+        }. Please try again or contact support if the problem persists.`,
+        retryable: true,
       },
       { status: 500 }
     );

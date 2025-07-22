@@ -18,8 +18,8 @@ export async function POST(request: NextRequest) {
 
     const { callRecord, transcript, callInfo } = callData;
 
-    // Enhanced system prompt for single call analysis
-    const systemPrompt = `You are an AI assistant specialized in analyzing individual call center interactions and providing detailed insights.
+    // Prompt for single calls
+    const systemPrompt = `You are an AI assistant specialized in analysing individual call center interactions and providing detailed insights.
 
 Call Context:
 - Call ID: ${callRecord.id}
@@ -54,13 +54,13 @@ Available Data Fields:
 - Call summary if available
 - Customer CLI information`;
 
-    // Prepare the call data for analysis
+    // JSON Prep
     const callDataString = JSON.stringify({
       ...callRecord,
       transcript_segments: transcript
     }, null, 2);
 
-    const userPrompt = `Please analyze this specific call center interaction and respond to: "${query}"
+    const userPrompt = `Please analyse this specific call center interaction and respond to: "${query}"
 
 Call Record Data:
 ${callDataString}
@@ -81,11 +81,12 @@ Provide a comprehensive analysis focusing on this individual call with specific 
 
     return NextResponse.json({ response });
 
+    // TODO: fix data type issues (15/07)
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   } catch (error: any) {
     console.error('Error calling OpenAI for call detail analysis:', error);
 
-    // Handle specific OpenAI errors with more detail
+    // Error handling stuff
     if (error?.status === 429) {
       return NextResponse.json(
         { error: 'Rate limit exceeded. The system will automatically retry with exponential backoff.' },

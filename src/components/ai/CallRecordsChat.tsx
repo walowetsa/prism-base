@@ -3,12 +3,12 @@
 
 import { useState, useRef, useEffect, useCallback } from "react";
 import { Send, AlertCircle, Loader2, Database, Clock } from "lucide-react";
-import ReactMarkdown from 'react-markdown';
+import ReactMarkdown from "react-markdown";
 import CallRecord from "@/types/CallRecord";
 
 interface Message {
   id: string;
-  type: 'user' | 'assistant';
+  type: "user" | "assistant";
   content: string;
   timestamp: Date;
   error?: boolean;
@@ -27,7 +27,6 @@ interface CallRecordsChatProps {
   loading: boolean;
 }
 
-// Enhanced markdown components (keeping your existing ones)
 const MarkdownComponents = {
   h1: ({ children }: any) => (
     <h1 className="text-lg font-bold mb-2 text-black">{children}</h1>
@@ -42,22 +41,24 @@ const MarkdownComponents = {
     <p className="mb-2 text-black leading-relaxed">{children}</p>
   ),
   ul: ({ children }: any) => (
-    <ul className="list-disc list-inside mb-2 space-y-1 text-black">{children}</ul>
+    <ul className="list-disc list-inside mb-2 space-y-1 text-black">
+      {children}
+    </ul>
   ),
   ol: ({ children }: any) => (
-    <ol className="list-decimal list-inside mb-2 space-y-1 text-black">{children}</ol>
+    <ol className="list-decimal list-inside mb-2 space-y-1 text-black">
+      {children}
+    </ol>
   ),
-  li: ({ children }: any) => (
-    <li className="text-black">{children}</li>
-  ),
+  li: ({ children }: any) => <li className="text-black">{children}</li>,
   strong: ({ children }: any) => (
     <strong className="font-semibold text-black">{children}</strong>
   ),
-  em: ({ children }: any) => (
-    <em className="italic text-black">{children}</em>
-  ),
+  em: ({ children }: any) => <em className="italic text-black">{children}</em>,
   code: ({ children }: any) => (
-    <code className="bg-gray-100 px-1 py-0.5 rounded text-sm font-mono text-black">{children}</code>
+    <code className="bg-gray-100 px-1 py-0.5 rounded text-sm font-mono text-black">
+      {children}
+    </code>
   ),
   blockquote: ({ children }: any) => (
     <blockquote className="border-l-4 border-emerald-800 pl-4 italic text-black mb-2">
@@ -66,307 +67,375 @@ const MarkdownComponents = {
   ),
 };
 
-// Enhanced data size calculation
-const calculateDataComplexity = (records: CallRecord[]): {
-  complexity: 'low' | 'medium' | 'high' | 'extreme';
+const calculateDataComplexity = (
+  records: CallRecord[]
+): {
+  complexity: "low" | "medium" | "high" | "extreme";
   estimatedTokens: number;
   recommendation: string;
 } => {
   const recordCount = records.length;
-  const avgFieldsPerRecord = 15; // Approximate
-  const estimatedTokens = recordCount * avgFieldsPerRecord * 1.5; // Rough token estimation
-  
+  const avgFieldsPerRecord = 15;
+  const estimatedTokens = recordCount * avgFieldsPerRecord * 1.5;
+
   if (recordCount < 100) {
     return {
-      complexity: 'low',
+      complexity: "low",
       estimatedTokens,
-      recommendation: 'Full dataset analysis recommended'
+      recommendation: "Full dataset analysis recommended",
     };
   } else if (recordCount < 1000) {
     return {
-      complexity: 'medium', 
+      complexity: "medium",
       estimatedTokens,
-      recommendation: 'Smart aggregation will be applied'
+      recommendation: "Smart aggregation will be applied",
     };
   } else if (recordCount < 5000) {
     return {
-      complexity: 'high',
+      complexity: "high",
       estimatedTokens,
-      recommendation: 'Statistical sampling will be used'
+      recommendation: "Statistical sampling will be used",
     };
   } else {
     return {
-      complexity: 'extreme',
+      complexity: "extreme",
       estimatedTokens,
-      recommendation: 'Advanced chunking strategy required'
+      recommendation: "Advanced chunking strategy required",
     };
   }
 };
 
-// Client-side caching for similar queries
-const queryCache = new Map<string, { response: string; timestamp: number; metadata: any }>();
+// client-side caching
+const queryCache = new Map<
+  string,
+  { response: string; timestamp: number; metadata: any }
+>();
 const CACHE_DURATION = 5 * 60 * 1000; // 5 minutes
 
 const getCachedResponse = (query: string, recordCount: number): any | null => {
   const cacheKey = `${query.toLowerCase().trim()}_${recordCount}`;
   const cached = queryCache.get(cacheKey);
-  
+
   if (cached && Date.now() - cached.timestamp < CACHE_DURATION) {
     return cached;
   }
-  
-  // Clean old entries
+
+  // reset entriess
   for (const [key, value] of queryCache.entries()) {
     if (Date.now() - value.timestamp > CACHE_DURATION) {
       queryCache.delete(key);
     }
   }
-  
+
   return null;
 };
 
-const setCachedResponse = (query: string, recordCount: number, response: string, metadata: any) => {
+const setCachedResponse = (
+  query: string,
+  recordCount: number,
+  response: string,
+  metadata: any
+) => {
   const cacheKey = `${query.toLowerCase().trim()}_${recordCount}`;
   queryCache.set(cacheKey, {
     response,
     metadata,
-    timestamp: Date.now()
+    timestamp: Date.now(),
   });
 };
 
-// Enhanced query classification with complexity awareness
-const classifyQuery = (query: string, recordCount: number): { 
-  type: string; 
-  priority: 'low' | 'medium' | 'high';
-  complexity: 'simple' | 'complex';
+const classifyQuery = (
+  query: string,
+  recordCount: number
+): {
+  type: string;
+  priority: "low" | "medium" | "high";
+  complexity: "simple" | "complex";
 } => {
   const lowerQuery = query.toLowerCase();
-  let type = 'general';
-  let complexity: 'simple' | 'complex' = 'simple';
-  let priority: 'low' | 'medium' | 'high' = 'medium';
-  
-  // Determine query type
-  if (lowerQuery.includes('disposition') || lowerQuery.includes('outcome')) {
-    type = 'disposition';
-  } else if (lowerQuery.includes('sentiment') || lowerQuery.includes('satisfaction')) {
-    type = 'sentiment';
-  } else if (lowerQuery.includes('agent') || lowerQuery.includes('performance')) {
-    type = 'agent_performance';
-    complexity = 'complex';
-  } else if (lowerQuery.includes('time') || lowerQuery.includes('duration')) {
-    type = 'timing';
-  } else if (lowerQuery.includes('queue') || lowerQuery.includes('department')) {
-    type = 'queue_analysis';
-  } else if (lowerQuery.includes('summary') || lowerQuery.includes('overview')) {
-    type = 'summary';
-    complexity = 'complex';
-    priority = 'high';
-  } else if (lowerQuery.includes('trend') || lowerQuery.includes('pattern')) {
-    type = 'trends';
-    complexity = 'complex';
+  let type = "general";
+  let complexity: "simple" | "complex" = "simple";
+  let priority: "low" | "medium" | "high" = "medium";
+
+  // Query typing
+  if (lowerQuery.includes("disposition") || lowerQuery.includes("outcome")) {
+    type = "disposition";
+  } else if (
+    lowerQuery.includes("sentiment") ||
+    lowerQuery.includes("satisfaction")
+  ) {
+    type = "sentiment";
+  } else if (
+    lowerQuery.includes("agent") ||
+    lowerQuery.includes("performance")
+  ) {
+    type = "agent_performance";
+    complexity = "complex";
+  } else if (lowerQuery.includes("time") || lowerQuery.includes("duration")) {
+    type = "timing";
+  } else if (
+    lowerQuery.includes("queue") ||
+    lowerQuery.includes("department")
+  ) {
+    type = "queue_analysis";
+  } else if (
+    lowerQuery.includes("summary") ||
+    lowerQuery.includes("overview")
+  ) {
+    type = "summary";
+    complexity = "complex";
+    priority = "high";
+  } else if (lowerQuery.includes("trend") || lowerQuery.includes("pattern")) {
+    type = "trends";
+    complexity = "complex";
   }
-  
-  // Adjust complexity based on record count
+
+  // set complexity
   if (recordCount > 1000) {
-    complexity = 'complex';
+    complexity = "complex";
   }
-  
+
   return { type, priority, complexity };
 };
 
-// Progressive data preparation - start small and expand if needed
-const prepareProgressiveData = (records: CallRecord[], queryType: string, complexity: 'simple' | 'complex') => {
-  const maxRecords = complexity === 'simple' ? 200 : 500;
+const prepareProgressiveData = (
+  records: CallRecord[],
+  queryType: string,
+  complexity: "simple" | "complex"
+) => {
+  const maxRecords = complexity === "simple" ? 200 : 500;
   const workingRecords = records.slice(0, maxRecords);
-  
-  // Use your existing prepareSmartData function but with limited records
   return prepareSmartDataEnhanced(workingRecords, queryType, records.length);
 };
 
-// Enhanced version of your smart data preparation
-const prepareSmartDataEnhanced = (records: CallRecord[], queryType: string, totalCount: number) => {
+const prepareSmartDataEnhanced = (
+  records: CallRecord[],
+  queryType: string,
+  totalCount: number
+) => {
   const baseStats = {
     totalRecords: totalCount,
     analysedRecords: records.length,
     samplingRatio: records.length / totalCount,
-    dateRange: records.length > 0 ? {
-      earliest: records.map(r => r.initiation_timestamp).filter(Boolean).sort()[0],
-      latest: records.map(r => r.initiation_timestamp).filter(Boolean).sort().reverse()[0]
-    } : null
+    dateRange:
+      records.length > 0
+        ? {
+            earliest: records
+              .map((r) => r.initiation_timestamp)
+              .filter(Boolean)
+              .sort()[0],
+            latest: records
+              .map((r) => r.initiation_timestamp)
+              .filter(Boolean)
+              .sort()
+              .reverse()[0],
+          }
+        : null,
   };
 
-  // Helper functions (keeping your existing ones)
+  // helper funcs
   const extractSentiment = (sentimentAnalysis: any): string => {
-    if (!sentimentAnalysis) return 'Unknown';
+    if (!sentimentAnalysis) return "Unknown";
     if (Array.isArray(sentimentAnalysis) && sentimentAnalysis.length > 0) {
-      return sentimentAnalysis[0].sentiment || 'Unknown';
-    } else if (typeof sentimentAnalysis === 'string') {
+      return sentimentAnalysis[0].sentiment || "Unknown";
+    } else if (typeof sentimentAnalysis === "string") {
       return sentimentAnalysis;
     }
-    return 'Unknown';
+    return "Unknown";
   };
 
   const extractDuration = (duration: any): number => {
     if (!duration) return 0;
-    if (typeof duration === 'number') {
+    if (typeof duration === "number") {
       return duration;
-    } else if (typeof duration === 'object' && duration.minutes !== undefined && duration.seconds !== undefined) {
-      return (duration.minutes * 60) + duration.seconds;
+    } else if (
+      typeof duration === "object" &&
+      duration.minutes !== undefined &&
+      duration.seconds !== undefined
+    ) {
+      return duration.minutes * 60 + duration.seconds;
     }
     return 0;
   };
 
   const extractTime = (time: any): number => {
     if (!time) return 0;
-    if (typeof time === 'number') {
+    if (typeof time === "number") {
       return time;
-    } else if (typeof time === 'object' && time.minutes !== undefined && time.seconds !== undefined) {
-      return (time.minutes * 60) + time.seconds;
+    } else if (
+      typeof time === "object" &&
+      time.minutes !== undefined &&
+      time.seconds !== undefined
+    ) {
+      return time.minutes * 60 + time.seconds;
     }
     return 0;
   };
 
-  // Enhanced data preparation with statistical projections
   switch (queryType) {
-    case 'disposition':
+    case "disposition":
       const dispositions = records.reduce((acc, record) => {
-        const disp = record.disposition_title || 'Unknown';
+        const disp = record.disposition_title || "Unknown";
         acc[disp] = (acc[disp] || 0) + 1;
         return acc;
       }, {} as Record<string, number>);
-      
-      // Project to full dataset if sampling
+
       const projectedDispositions: Record<string, number> = {};
       Object.entries(dispositions).forEach(([key, value]) => {
-        projectedDispositions[key] = Math.round(value / baseStats.samplingRatio);
+        projectedDispositions[key] = Math.round(
+          value / baseStats.samplingRatio
+        );
       });
-      
+
       return {
-        type: 'disposition',
+        type: "disposition",
         data: {
-          dispositions: baseStats.samplingRatio < 1 ? projectedDispositions : dispositions,
+          dispositions:
+            baseStats.samplingRatio < 1 ? projectedDispositions : dispositions,
           sampleSize: records.length,
-          ...baseStats
-        }
+          ...baseStats,
+        },
       };
 
-    case 'agent_performance':
+    case "agent_performance":
       const agentStats = records.reduce((acc, record) => {
-        const agent = record.agent_username || 'Unknown';
+        const agent = record.agent_username || "Unknown";
         if (!acc[agent]) {
           acc[agent] = {
             totalCalls: 0,
             totalDuration: 0,
             totalHoldTime: 0,
             dispositions: {},
-            sentiments: {}
+            sentiments: {},
           };
         }
-        
+
         acc[agent].totalCalls++;
         acc[agent].totalDuration += extractDuration(record.call_duration);
         acc[agent].totalHoldTime += extractTime(record.total_hold_time);
-        
-        const disp = record.disposition_title || 'Unknown';
-        acc[agent].dispositions[disp] = (acc[agent].dispositions[disp] || 0) + 1;
-        
+
+        const disp = record.disposition_title || "Unknown";
+        acc[agent].dispositions[disp] =
+          (acc[agent].dispositions[disp] || 0) + 1;
+
         const sentiment = extractSentiment(record.sentiment_analysis);
-        acc[agent].sentiments[sentiment] = (acc[agent].sentiments[sentiment] || 0) + 1;
-        
+        acc[agent].sentiments[sentiment] =
+          (acc[agent].sentiments[sentiment] || 0) + 1;
+
         return acc;
       }, {} as Record<string, any>);
-      
+
       return {
-        type: 'agent_performance',
+        type: "agent_performance",
         data: {
           agentMetrics: agentStats,
           totalAgents: Object.keys(agentStats).length,
-          ...baseStats
-        }
+          ...baseStats,
+        },
       };
 
-    case 'summary':
+    case "summary":
       const topDispositions = Object.entries(
         records.reduce((acc, r) => {
-          const disp = r.disposition_title || 'Unknown';
+          const disp = r.disposition_title || "Unknown";
           acc[disp] = (acc[disp] || 0) + 1;
           return acc;
         }, {} as Record<string, number>)
-      ).sort(([,a], [,b]) => b - a).slice(0, 5);
+      )
+        .sort(([, a], [, b]) => b - a)
+        .slice(0, 5);
 
       return {
-        type: 'summary',
+        type: "summary",
         data: {
           overview: {
             totalCalls: totalCount,
             analysedCalls: records.length,
-            uniqueAgents: new Set(records.map(r => r.agent_username).filter(Boolean)).size,
-            uniqueQueues: new Set(records.map(r => r.queue_name).filter(Boolean)).size,
-            avgCallDuration: records.reduce((sum, r) => sum + extractDuration(r.call_duration), 0) / records.length,
-            avgHoldTime: records.reduce((sum, r) => sum + extractTime(r.total_hold_time), 0) / records.length,
+            uniqueAgents: new Set(
+              records.map((r) => r.agent_username).filter(Boolean)
+            ).size,
+            uniqueQueues: new Set(
+              records.map((r) => r.queue_name).filter(Boolean)
+            ).size,
+            avgCallDuration:
+              records.reduce(
+                (sum, r) => sum + extractDuration(r.call_duration),
+                0
+              ) / records.length,
+            avgHoldTime:
+              records.reduce(
+                (sum, r) => sum + extractTime(r.total_hold_time),
+                0
+              ) / records.length,
             topDispositions,
             sentimentDistribution: records.reduce((acc, r) => {
               const sentiment = extractSentiment(r.sentiment_analysis);
               acc[sentiment] = (acc[sentiment] || 0) + 1;
               return acc;
-            }, {} as Record<string, number>)
+            }, {} as Record<string, number>),
           },
-          ...baseStats
-        }
+          ...baseStats,
+        },
       };
 
     default:
-      // For general queries, provide a smart sample
-      const sampleRecords = records.slice(0, 10).map(record => ({
+      const sampleRecords = records.slice(0, 10).map((record) => ({
         id: record.id,
         agent_username: record.agent_username,
         queue_name: record.queue_name,
         call_duration: extractDuration(record.call_duration),
         disposition_title: record.disposition_title,
         sentiment_analysis: extractSentiment(record.sentiment_analysis),
-        primary_category: record.primary_category
+        primary_category: record.primary_category,
       }));
-      
+
       return {
-        type: 'general',
+        type: "general",
         data: {
           sampleRecords,
           quickStats: {
             totalRecords: totalCount,
-            avgDuration: records.reduce((sum, r) => sum + extractDuration(r.call_duration), 0) / records.length,
-            topDisposition: Object.entries(
-              records.reduce((acc, r) => {
-                const disp = r.disposition_title || 'Unknown';
-                acc[disp] = (acc[disp] || 0) + 1;
-                return acc;
-              }, {} as Record<string, number>)
-            ).sort(([,a], [,b]) => b - a)[0]?.[0] || 'None'
+            avgDuration:
+              records.reduce(
+                (sum, r) => sum + extractDuration(r.call_duration),
+                0
+              ) / records.length,
+            topDisposition:
+              Object.entries(
+                records.reduce((acc, r) => {
+                  const disp = r.disposition_title || "Unknown";
+                  acc[disp] = (acc[disp] || 0) + 1;
+                  return acc;
+                }, {} as Record<string, number>)
+              ).sort(([, a], [, b]) => b - a)[0]?.[0] || "None",
           },
-          ...baseStats
-        }
+          ...baseStats,
+        },
       };
   }
 };
 
 const CallRecordsChat: React.FC<CallRecordsChatProps> = ({
   filteredRecords,
-  loading
+  loading,
 }) => {
   const [messages, setMessages] = useState<Message[]>([
     {
-      id: '1',
-      type: 'assistant',
-      content: "Welcome to PRISM AI Analytics!\n\nI'm your intelligent call center analytics assistant. What would you like to explore?",
-      timestamp: new Date()
-    }
+      id: "1",
+      type: "assistant",
+      content:
+        "Welcome to PRISM AI Analytics!\n\nI'm your intelligent call center analytics assistant. What would you like to explore?",
+      timestamp: new Date(),
+    },
   ]);
   const [inputValue, setInputValue] = useState("");
   const [isTyping, setIsTyping] = useState(false);
   const [retryCount, setRetryCount] = useState(0);
-  const [dataComplexity, setDataComplexity] = useState<ReturnType<typeof calculateDataComplexity> | null>(null);
+  const [dataComplexity, setDataComplexity] = useState<ReturnType<
+    typeof calculateDataComplexity
+  > | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
-  // Calculate data complexity when records change
   useEffect(() => {
     if (filteredRecords.length > 0) {
       setDataComplexity(calculateDataComplexity(filteredRecords));
@@ -381,138 +450,157 @@ const CallRecordsChat: React.FC<CallRecordsChatProps> = ({
     scrollToBottom();
   }, [messages]);
 
-  // Enhanced retry logic with exponential backoff
-  const handleSendMessage = useCallback(async (customQuery?: string) => {
-    const queryText = customQuery || inputValue.trim();
-    if (!queryText || loading || isTyping) return;
+  const handleSendMessage = useCallback(
+    async (customQuery?: string) => {
+      const queryText = customQuery || inputValue.trim();
+      if (!queryText || loading || isTyping) return;
 
-    // Check cache first
-    const cachedResponse = getCachedResponse(queryText, filteredRecords.length);
-    if (cachedResponse) {
-      const userMessage: Message = {
-        id: Date.now().toString(),
-        type: 'user',
-        content: queryText,
-        timestamp: new Date()
-      };
+      // Check cache
+      const cachedResponse = getCachedResponse(
+        queryText,
+        filteredRecords.length
+      );
+      if (cachedResponse) {
+        const userMessage: Message = {
+          id: Date.now().toString(),
+          type: "user",
+          content: queryText,
+          timestamp: new Date(),
+        };
 
-      const assistantMessage: Message = {
-        id: (Date.now() + 1).toString(),
-        type: 'assistant',
-        content: cachedResponse.response + "\n\n*📋 Cached result for faster response*",
-        timestamp: new Date(),
-        metadata: cachedResponse.metadata
-      };
-
-      setMessages(prev => [...prev, userMessage, assistantMessage]);
-      if (!customQuery) setInputValue("");
-      return;
-    }
-
-    const startTime = Date.now();
-    const queryClassification = classifyQuery(queryText, filteredRecords.length);
-    
-    const userMessage: Message = {
-      id: Date.now().toString(),
-      type: 'user',
-      content: queryText,
-      timestamp: new Date()
-    };
-
-    setMessages(prev => [...prev, userMessage]);
-    if (!customQuery) setInputValue("");
-    setIsTyping(true);
-    setRetryCount(0);
-
-    const attemptQuery = async (retryAttempt = 0): Promise<void> => {
-      try {
-        const smartData = prepareProgressiveData(
-          filteredRecords, 
-          queryClassification.type, 
-          queryClassification.complexity
-        );
-        
-        const response = await fetch('/api/openai/query-calls', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({
-            query: queryText,
-            callData: smartData,
-            queryType: queryClassification.type
-          }),
-        });
-
-        const data = await response.json();
-
-        if (response.status === 429 && retryAttempt < 5) {
-          // Enhanced exponential backoff
-          const delay = Math.min(Math.pow(2, retryAttempt) * 1000, 30000); // Max 30s delay
-          await new Promise(resolve => setTimeout(resolve, delay));
-          setRetryCount(retryAttempt + 1);
-          return attemptQuery(retryAttempt + 1);
-        }
-
-        if (!response.ok) {
-          throw new Error(data.error || `HTTP error! status: ${response.status}`);
-        }
-
-        if (data.error) {
-          throw new Error(data.error);
-        }
-
-        const processingTime = Date.now() - startTime;
         const assistantMessage: Message = {
           id: (Date.now() + 1).toString(),
-          type: 'assistant',
-          content: data.response,
+          type: "assistant",
+          content:
+            cachedResponse.response +
+            "\n\n*📋 Cached result for faster response*",
           timestamp: new Date(),
-          queryType: queryClassification.type,
-          metadata: {
-            ...data.metadata,
-            processingTime
-          }
+          metadata: cachedResponse.metadata,
         };
 
-        setMessages(prev => [...prev, assistantMessage]);
-        
-        // Cache successful responses
-        setCachedResponse(queryText, filteredRecords.length, data.response, data.metadata);
-        
-      } catch (error) {
-        console.error('Error calling OpenAI:', error);
-        
-        const errorMessage: Message = {
-          id: (Date.now() + 1).toString(),
-          type: 'assistant',
-          content: `❌ **Analysis Error**\n\n${error instanceof Error ? error.message : 'Unknown error occurred'}\n\n**Suggestions:**\n• Try a more specific question\n• Use one of the quick prompts below\n• Filter your dataset if it's very large\n• Wait a moment and try again`,
-          timestamp: new Date(),
-          error: true
-        };
-
-        setMessages(prev => [...prev, errorMessage]);
-      } finally {
-        setIsTyping(false);
-        setRetryCount(0);
+        setMessages((prev) => [...prev, userMessage, assistantMessage]);
+        if (!customQuery) setInputValue("");
+        return;
       }
-    };
 
-    await attemptQuery();
-  }, [inputValue, loading, isTyping, filteredRecords]);
+      const startTime = Date.now();
+      const queryClassification = classifyQuery(
+        queryText,
+        filteredRecords.length
+      );
+
+      const userMessage: Message = {
+        id: Date.now().toString(),
+        type: "user",
+        content: queryText,
+        timestamp: new Date(),
+      };
+
+      setMessages((prev) => [...prev, userMessage]);
+      if (!customQuery) setInputValue("");
+      setIsTyping(true);
+      setRetryCount(0);
+
+      const attemptQuery = async (retryAttempt = 0): Promise<void> => {
+        try {
+          const smartData = prepareProgressiveData(
+            filteredRecords,
+            queryClassification.type,
+            queryClassification.complexity
+          );
+
+          const response = await fetch("/api/openai/query-calls", {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+            },
+            body: JSON.stringify({
+              query: queryText,
+              callData: smartData,
+              queryType: queryClassification.type,
+            }),
+          });
+
+          const data = await response.json();
+
+          if (response.status === 429 && retryAttempt < 5) {
+            const delay = Math.min(Math.pow(2, retryAttempt) * 1000, 30000);
+            await new Promise((resolve) => setTimeout(resolve, delay));
+            setRetryCount(retryAttempt + 1);
+            return attemptQuery(retryAttempt + 1);
+          }
+
+          if (!response.ok) {
+            throw new Error(
+              data.error || `HTTP error! status: ${response.status}`
+            );
+          }
+
+          if (data.error) {
+            throw new Error(data.error);
+          }
+
+          const processingTime = Date.now() - startTime;
+          const assistantMessage: Message = {
+            id: (Date.now() + 1).toString(),
+            type: "assistant",
+            content: data.response,
+            timestamp: new Date(),
+            queryType: queryClassification.type,
+            metadata: {
+              ...data.metadata,
+              processingTime,
+            },
+          };
+
+          setMessages((prev) => [...prev, assistantMessage]);
+
+          setCachedResponse(
+            queryText,
+            filteredRecords.length,
+            data.response,
+            data.metadata
+          );
+        } catch (error) {
+          console.error("Error calling OpenAI:", error);
+
+          const errorMessage: Message = {
+            id: (Date.now() + 1).toString(),
+            type: "assistant",
+            content: `❌ **Analysis Error**\n\n${
+              error instanceof Error ? error.message : "Unknown error occurred"
+            }\n\n**Suggestions:**\n• Try a more specific question\n• Use one of the quick prompts below\n• Filter your dataset if it's very large\n• Wait a moment and try again`,
+            timestamp: new Date(),
+            error: true,
+          };
+
+          setMessages((prev) => [...prev, errorMessage]);
+        } finally {
+          setIsTyping(false);
+          setRetryCount(0);
+        }
+      };
+
+      await attemptQuery();
+    },
+    [inputValue, loading, isTyping, filteredRecords]
+  );
 
   const handleKeyPress = (e: React.KeyboardEvent) => {
-    if (e.key === 'Enter' && !e.shiftKey) {
+    if (e.key === "Enter" && !e.shiftKey) {
       e.preventDefault();
       handleSendMessage();
     }
   };
 
   const formatTimestamp = (timestamp: Date) => {
-    return timestamp.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+    return timestamp.toLocaleTimeString([], {
+      hour: "2-digit",
+      minute: "2-digit",
+    });
   };
 
-  // Enhanced smart prompts based on data complexity
+  // examples prompts based on record length
   const getSmartPrompts = () => {
     const basePrompts = [
       "Show me disposition breakdown with percentages",
@@ -526,7 +614,7 @@ const CallRecordsChat: React.FC<CallRecordsChatProps> = ({
         "Identify top performing agents",
         "Show queue efficiency metrics",
         "What are the main customer issues?",
-        "Analyse peak call times and patterns"
+        "Analyse peak call times and patterns",
       ];
     }
 
@@ -535,29 +623,36 @@ const CallRecordsChat: React.FC<CallRecordsChatProps> = ({
       "Compare agent performance metrics",
       "Which queues need attention?",
       "Show calls exceeding 15 minutes",
-      "Identify improvement opportunities"
+      "Identify improvement opportunities",
     ];
   };
 
   return (
     <div className="flex flex-col h-full bg-black rounded-lg shadow-xl">
-      {/* Enhanced Header with Data Insights */}
       <div className="flex items-center gap-3 p-4 bg-black rounded-t-lg">
         <div className="flex-1">
           <h3 className="font-bold text-white text-lg">PRISM AI Analytics</h3>
           <div className="flex items-center gap-4 text-sm text-white">
             <span className="flex items-center gap-2">
               <span className="w-2 h-2 bg-emerald-800 rounded-full animate-pulse"></span>
-              {loading ? 'Loading data...' : `${filteredRecords.length.toLocaleString()} records`}
+              {loading
+                ? "Loading data..."
+                : `${filteredRecords.length.toLocaleString()} records`}
             </span>
             {dataComplexity && (
               <span className="flex items-center gap-2">
                 <Database className="w-4 h-4" />
-                <span className={`px-2 py-1 rounded text-xs ${
-                  dataComplexity.complexity === 'low' ? 'bg-green-800' :
-                  dataComplexity.complexity === 'medium' ? 'bg-yellow-800' :
-                  dataComplexity.complexity === 'high' ? 'bg-orange-800' : 'bg-red-800'
-                }`}>
+                <span
+                  className={`px-2 py-1 rounded text-xs ${
+                    dataComplexity.complexity === "low"
+                      ? "bg-green-800"
+                      : dataComplexity.complexity === "medium"
+                      ? "bg-yellow-800"
+                      : dataComplexity.complexity === "high"
+                      ? "bg-orange-800"
+                      : "bg-red-800"
+                  }`}
+                >
                   {dataComplexity.complexity.toUpperCase()}
                 </span>
                 <span className="text-xs">{dataComplexity.recommendation}</span>
@@ -573,13 +668,13 @@ const CallRecordsChat: React.FC<CallRecordsChatProps> = ({
         )}
       </div>
 
-      {/* Messages with enhanced metadata display */}
       <div className="flex-1 overflow-y-auto p-4 space-y-4 bg-neutral-800">
         {filteredRecords.length === 0 && !loading && (
           <div className="flex items-center gap-3 p-4 bg-white border border-emerald-800 rounded-lg">
             <AlertCircle className="w-5 h-5 text-emerald-800" />
             <div className="text-sm text-black">
-              No call records available for analysis. Please adjust your filters or check your data source.
+              No call records available for analysis. Please adjust your filters
+              or check your data source.
             </div>
           </div>
         )}
@@ -587,19 +682,25 @@ const CallRecordsChat: React.FC<CallRecordsChatProps> = ({
         {messages.map((message) => (
           <div
             key={message.id}
-            className={`flex gap-3 ${message.type === 'user' ? 'justify-end' : 'justify-start'}`}
+            className={`flex gap-3 ${
+              message.type === "user" ? "justify-end" : "justify-start"
+            }`}
           >
-            <div className={`max-w-[85%] ${message.type === 'user' ? 'order-1' : ''}`}>
+            <div
+              className={`max-w-[85%] ${
+                message.type === "user" ? "order-1" : ""
+              }`}
+            >
               <div
                 className={`rounded-xl px-4 py-3 shadow-lg text-sm ${
-                  message.type === 'user'
-                    ? 'bg-emerald-800 text-white'
+                  message.type === "user"
+                    ? "bg-emerald-800 text-white"
                     : message.error
-                    ? 'bg-white text-black border border-red-300'
-                    : 'bg-white text-black border border-emerald-800'
+                    ? "bg-white text-black border border-red-300"
+                    : "bg-white text-black border border-emerald-800"
                 }`}
               >
-                {message.type === 'assistant' && !message.error ? (
+                {message.type === "assistant" && !message.error ? (
                   <div className="prose prose-sm max-w-none">
                     <ReactMarkdown components={MarkdownComponents}>
                       {message.content}
@@ -610,8 +711,7 @@ const CallRecordsChat: React.FC<CallRecordsChatProps> = ({
                     {message.content}
                   </div>
                 )}
-                
-                {/* Enhanced metadata display */}
+
                 {message.metadata && (
                   <div className="text-xs mt-2 pt-2 border-t border-gray-200 flex items-center gap-4 opacity-70">
                     {message.metadata.processingTime && (
@@ -621,14 +721,19 @@ const CallRecordsChat: React.FC<CallRecordsChatProps> = ({
                       </span>
                     )}
                     {message.metadata.dataPoints && (
-                      <span>{message.metadata.dataPoints.toLocaleString()} data points</span>
+                      <span>
+                        {message.metadata.dataPoints.toLocaleString()} data
+                        points
+                      </span>
                     )}
                   </div>
                 )}
               </div>
-              <div className={`text-xs text-white mt-1 ${
-                message.type === 'user' ? 'text-right' : 'text-left'
-              }`}>
+              <div
+                className={`text-xs text-white mt-1 ${
+                  message.type === "user" ? "text-right" : "text-left"
+                }`}
+              >
                 {formatTimestamp(message.timestamp)}
               </div>
             </div>
@@ -640,24 +745,29 @@ const CallRecordsChat: React.FC<CallRecordsChatProps> = ({
             <div className="bg-white rounded-xl px-4 py-3 border border-emerald-800">
               <div className="flex items-center gap-2">
                 <div className="text-sm text-black">
-                  {dataComplexity?.complexity === 'extreme' 
-                    ? 'Processing large dataset...' 
-                    : 'Thinking...'}
+                  {dataComplexity?.complexity === "extreme"
+                    ? "Processing large dataset..."
+                    : "Thinking..."}
                 </div>
                 <div className="flex gap-1">
                   <div className="w-2 h-2 bg-emerald-800 rounded-full animate-bounce"></div>
-                  <div className="w-2 h-2 bg-emerald-800 rounded-full animate-bounce" style={{ animationDelay: '0.1s' }}></div>
-                  <div className="w-2 h-2 bg-emerald-800 rounded-full animate-bounce" style={{ animationDelay: '0.2s' }}></div>
+                  <div
+                    className="w-2 h-2 bg-emerald-800 rounded-full animate-bounce"
+                    style={{ animationDelay: "0.1s" }}
+                  ></div>
+                  <div
+                    className="w-2 h-2 bg-emerald-800 rounded-full animate-bounce"
+                    style={{ animationDelay: "0.2s" }}
+                  ></div>
                 </div>
               </div>
             </div>
           </div>
         )}
-        
+
         <div ref={messagesEndRef} />
       </div>
 
-      {/* Enhanced Input Section */}
       <div className="p-4 bg-black">
         <div className="flex gap-3">
           <input
@@ -666,11 +776,11 @@ const CallRecordsChat: React.FC<CallRecordsChatProps> = ({
             onChange={(e) => setInputValue(e.target.value)}
             onKeyPress={handleKeyPress}
             placeholder={
-              loading 
-                ? "Loading data..." 
+              loading
+                ? "Loading data..."
                 : filteredRecords.length === 0
                 ? "No data available for analysis..."
-                : dataComplexity?.complexity === 'extreme'
+                : dataComplexity?.complexity === "extreme"
                 ? "Ask about your data - optimized processing enabled..."
                 : "Ask me anything about your call data..."
             }
@@ -679,14 +789,19 @@ const CallRecordsChat: React.FC<CallRecordsChatProps> = ({
           />
           <button
             onClick={() => handleSendMessage()}
-            disabled={!inputValue.trim() || loading || filteredRecords.length === 0 || isTyping}
+            disabled={
+              !inputValue.trim() ||
+              loading ||
+              filteredRecords.length === 0 ||
+              isTyping
+            }
             className="px-6 py-3 bg-emerald-800 text-white rounded-lg hover:bg-emerald-800 focus:outline-none focus:ring-2 focus:ring-emerald-800 focus:ring-offset-2 focus:ring-offset-black disabled:bg-white disabled:text-emerald-800 disabled:cursor-not-allowed transition-all duration-200 shadow-lg border border-emerald-800"
           >
             <Send className="w-5 h-5" />
           </button>
         </div>
-        
-        {/* Smart prompts */}
+
+        {/* example prompts */}
         {filteredRecords.length > 0 && (
           <div className="mt-3">
             <div className="grid grid-cols-2 gap-2">
@@ -703,12 +818,12 @@ const CallRecordsChat: React.FC<CallRecordsChatProps> = ({
             </div>
           </div>
         )}
-        
-        {/* Enhanced status information */}
+
         {filteredRecords.length > 0 && (
           <div className="text-xs text-white mt-3 flex items-center justify-between">
             <span>
-              Smart processing: {filteredRecords.length.toLocaleString()} records
+              Smart processing: {filteredRecords.length.toLocaleString()}{" "}
+              records
               {dataComplexity && (
                 <span className="ml-2 px-2 py-1 bg-neutral-700 rounded">
                   {dataComplexity.complexity} complexity
