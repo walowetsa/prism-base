@@ -655,7 +655,6 @@ const CallRecordsChat: React.FC<CallRecordsChatProps> = ({
                 >
                   {dataComplexity.complexity.toUpperCase()}
                 </span>
-                <span className="text-xs">{dataComplexity.recommendation}</span>
               </span>
             )}
           </div>
@@ -822,19 +821,9 @@ const CallRecordsChat: React.FC<CallRecordsChatProps> = ({
         {filteredRecords.length > 0 && (
           <div className="text-xs text-white mt-3 flex items-center justify-between">
             <span>
-              Smart processing: {filteredRecords.length.toLocaleString()}{" "}
+              Processing: {filteredRecords.length.toLocaleString()}{" "}
               records
-              {dataComplexity && (
-                <span className="ml-2 px-2 py-1 bg-neutral-700 rounded">
-                  {dataComplexity.complexity} complexity
-                </span>
-              )}
             </span>
-            {queryCache.size > 0 && (
-              <span className="text-emerald-400">
-                📋 {queryCache.size} cached responses
-              </span>
-            )}
           </div>
         )}
       </div>
