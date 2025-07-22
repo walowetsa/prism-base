@@ -1,1 +1,9 @@
 @import "tailwindcss";
+
+* {
+  font-family: var(--font-gilroy), ui-sans-serif, system-ui, sans-serif;
+}
+
+.font-gilroy {
+  font-family: var(--font-gilroy), ui-sans-serif, system-ui, sans-serif;
+}
