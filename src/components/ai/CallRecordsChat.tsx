@@ -18,6 +18,7 @@ interface Message {
     model?: string;
     dataPoints?: number;
     processingTime?: number;
+    hasFullDispositions?: boolean;
   };
 }
 
@@ -25,6 +26,7 @@ interface CallRecordsChatProps {
   filteredRecords: CallRecord[];
   totalRecords: number;
   loading: boolean;
+  allRecords?: CallRecord[]; // Add this to get access to full dataset for disposition counts
 }
 
 const MarkdownComponents = {
@@ -120,7 +122,7 @@ const getCachedResponse = (query: string, recordCount: number): any | null => {
     return cached;
   }
 
-  // reset entriess
+  // Clean expired entries
   for (const [key, value] of queryCache.entries()) {
     if (Date.now() - value.timestamp > CACHE_DURATION) {
       queryCache.delete(key);
@@ -160,6 +162,7 @@ const classifyQuery = (
   // Query typing
   if (lowerQuery.includes("disposition") || lowerQuery.includes("outcome")) {
     type = "disposition";
+    priority = "high"; // Disposition queries are high priority since we have full data
   } else if (
     lowerQuery.includes("sentiment") ||
     lowerQuery.includes("satisfaction")
@@ -190,7 +193,7 @@ const classifyQuery = (
     complexity = "complex";
   }
 
-  // set complexity
+  // Adjust complexity based on record count
   if (recordCount > 1000) {
     complexity = "complex";
   }
@@ -233,7 +236,7 @@ const prepareSmartDataEnhanced = (
         : null,
   };
 
-  // helper funcs
+  // Helper functions
   const extractSentiment = (sentimentAnalysis: any): string => {
     if (!sentimentAnalysis) return "Unknown";
     if (Array.isArray(sentimentAnalysis) && sentimentAnalysis.length > 0) {
@@ -280,20 +283,14 @@ const prepareSmartDataEnhanced = (
         return acc;
       }, {} as Record<string, number>);
 
-      const projectedDispositions: Record<string, number> = {};
-      Object.entries(dispositions).forEach(([key, value]) => {
-        projectedDispositions[key] = Math.round(
-          value / baseStats.samplingRatio
-        );
-      });
-
+      // Note: Full disposition counts will be calculated server-side from complete dataset
       return {
         type: "disposition",
         data: {
-          dispositions:
-            baseStats.samplingRatio < 1 ? projectedDispositions : dispositions,
+          dispositions,
           sampleSize: records.length,
           ...baseStats,
+          note: "Sample data - full disposition counts will be calculated server-side"
         },
       };
 
@@ -418,6 +415,7 @@ const prepareSmartDataEnhanced = (
 const CallRecordsChat: React.FC<CallRecordsChatProps> = ({
   filteredRecords,
   loading,
+  allRecords, // Use this for complete disposition calculations
 }) => {
   const [messages, setMessages] = useState<Message[]>([
     {
@@ -509,6 +507,10 @@ const CallRecordsChat: React.FC<CallRecordsChatProps> = ({
             queryClassification.complexity
           );
 
+          // Prepare full records for disposition calculations
+          // Use allRecords if available, otherwise fall back to filteredRecords
+          const recordsForDispositions = allRecords && allRecords.length > 0 ? allRecords : filteredRecords;
+
           const response = await fetch("/api/openai/query-calls", {
             method: "POST",
             headers: {
@@ -518,6 +520,7 @@ const CallRecordsChat: React.FC<CallRecordsChatProps> = ({
               query: queryText,
               callData: smartData,
               queryType: queryClassification.type,
+              fullRecords: recordsForDispositions, // Pass full records for accurate disposition counts
             }),
           });
 
@@ -583,7 +586,7 @@ const CallRecordsChat: React.FC<CallRecordsChatProps> = ({
 
       await attemptQuery();
     },
-    [inputValue, loading, isTyping, filteredRecords]
+    [inputValue, loading, isTyping, filteredRecords, allRecords]
   );
 
   const handleKeyPress = (e: React.KeyboardEvent) => {
@@ -600,10 +603,10 @@ const CallRecordsChat: React.FC<CallRecordsChatProps> = ({
     });
   };
 
-  // examples prompts based on record length
+  // Enhanced prompts that leverage full disposition data
   const getSmartPrompts = () => {
     const basePrompts = [
-      "Show me disposition breakdown with percentages",
+      "Show me complete disposition breakdown with percentages",
       "Analyse customer sentiment trends",
       "What are our average call times?",
     ];
@@ -611,21 +614,24 @@ const CallRecordsChat: React.FC<CallRecordsChatProps> = ({
     if (filteredRecords.length > 1000) {
       return [
         ...basePrompts,
-        "Identify top performing agents",
+        "Identify top performing agents with disposition success rates",
         "Show queue efficiency metrics",
-        "What are the main customer issues?",
-        "Analyse peak call times and patterns",
+        "What are the main customer issues by disposition?",
+        "Analyse peak call times and disposition patterns",
       ];
     }
 
     return [
       ...basePrompts,
-      "Compare agent performance metrics",
-      "Which queues need attention?",
-      "Show calls exceeding 15 minutes",
-      "Identify improvement opportunities",
+      "Compare agent performance with disposition outcomes",
+      "Which queues need attention based on dispositions?",
+      "Show calls exceeding 15 minutes and their outcomes",
+      "Identify improvement opportunities from disposition data",
     ];
   };
+
+  // Calculate if we have full disposition access
+  const hasFullDispositionData = allRecords && allRecords.length > filteredRecords.length;
 
   return (
     <div className="flex flex-col h-full bg-black rounded-lg shadow-xl">
@@ -639,6 +645,14 @@ const CallRecordsChat: React.FC<CallRecordsChatProps> = ({
                 ? "Loading data..."
                 : `${filteredRecords.length.toLocaleString()} records`}
             </span>
+            {hasFullDispositionData && (
+              <span className="flex items-center gap-2 text-emerald-300">
+                <Database className="w-4 h-4" />
+                <span className="text-xs">
+                  Full disposition data available ({allRecords?.length.toLocaleString()} total)
+                </span>
+              </span>
+            )}
             {dataComplexity && (
               <span className="flex items-center gap-2">
                 <Database className="w-4 h-4" />
@@ -725,6 +739,11 @@ const CallRecordsChat: React.FC<CallRecordsChatProps> = ({
                         points
                       </span>
                     )}
+                    {message.metadata.hasFullDispositions && (
+                      <span className="text-emerald-600 font-medium">
+                        ✓ Full disposition data
+                      </span>
+                    )}
                   </div>
                 )}
               </div>
@@ -745,7 +764,9 @@ const CallRecordsChat: React.FC<CallRecordsChatProps> = ({
               <div className="flex items-center gap-2">
                 <div className="text-sm text-black">
                   {dataComplexity?.complexity === "extreme"
-                    ? "Processing large dataset..."
+                    ? "Processing large dataset with full disposition data..."
+                    : hasFullDispositionData
+                    ? "Analyzing with complete disposition information..."
                     : "Thinking..."}
                 </div>
                 <div className="flex gap-1">
@@ -780,7 +801,11 @@ const CallRecordsChat: React.FC<CallRecordsChatProps> = ({
                 : filteredRecords.length === 0
                 ? "No data available for analysis..."
                 : dataComplexity?.complexity === "extreme"
-                ? "Ask about your data - optimized processing enabled..."
+                ? hasFullDispositionData
+                  ? "Ask about your data - full disposition analysis enabled..."
+                  : "Ask about your data - optimized processing enabled..."
+                : hasFullDispositionData
+                ? "Ask me anything - complete disposition data available..."
                 : "Ask me anything about your call data..."
             }
             disabled={loading || filteredRecords.length === 0 || isTyping}
@@ -800,7 +825,7 @@ const CallRecordsChat: React.FC<CallRecordsChatProps> = ({
           </button>
         </div>
 
-        {/* example prompts */}
+        {/* Enhanced example prompts */}
         {filteredRecords.length > 0 && (
           <div className="mt-3">
             <div className="grid grid-cols-2 gap-2">
@@ -821,8 +846,12 @@ const CallRecordsChat: React.FC<CallRecordsChatProps> = ({
         {filteredRecords.length > 0 && (
           <div className="text-xs text-white mt-3 flex items-center justify-between">
             <span>
-              Processing: {filteredRecords.length.toLocaleString()}{" "}
-              records
+              Processing: {filteredRecords.length.toLocaleString()} records
+              {hasFullDispositionData && (
+                <span className="text-emerald-300 ml-2">
+                  • Full disposition data: {allRecords?.length.toLocaleString()} records
+                </span>
+              )}
             </span>
           </div>
         )}

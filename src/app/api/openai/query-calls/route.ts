@@ -8,10 +8,9 @@ const openai = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY,
 });
 
-// Rate limitiing
+// Rate limiting
 const rateLimitMap = new Map<string, { count: number; resetTime: number }>();
 // TODO: fix data type issues (15/07)
-// eslint-disable-next-line @typescript-eslint/no-unsafe-function-type, @typescript-eslint/no-explicit-any
 const requestQueue = new Map<
   string,
   Array<{ resolve: Function; reject: Function; request: any }>
@@ -21,13 +20,46 @@ const estimateTokens = (text: string): number => {
   return Math.ceil(text.length / 4); // Rough estimation: 1 token ≈ 4 characters
 };
 
-// Data sampling for big boy datasets
+// Enhanced data preparation that always preserves full disposition counts
 // TODO: fix data type issues (15/07)
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
+const enhanceWithFullDispositions = (callData: any, fullRecords?: any[]): any => {
+  if (!fullRecords || fullRecords.length === 0) {
+    return callData;
+  }
+
+  const fullDispositionCounts = fullRecords.reduce((acc, record) => {
+    const disp = record.disposition_title || "Unknown";
+    acc[disp] = (acc[disp] || 0) + 1;
+    return acc;
+  }, {} as Record<string, number>);
+
+  const totalCalls = fullRecords.length;
+  const dispositionBreakdown = Object.entries(fullDispositionCounts).map(([disposition, count]) => ({
+    disposition,
+    count: count as number,
+    percentage: (((count as number) / totalCalls) * 100).toFixed(1)
+  })).sort((a, b) => b.count - a.count);
+
+  const enhanced = { ...callData };
+  
+  if (enhanced.data) {
+    enhanced.data.fullDispositionCounts = fullDispositionCounts;
+    enhanced.data.dispositionBreakdown = dispositionBreakdown;
+    enhanced.data.totalCallsInDataset = totalCalls;
+    
+    if (callData.type === "disposition") {
+      enhanced.data.dispositions = fullDispositionCounts;
+    }
+  }
+
+  return enhanced;
+};
+
+// Data sampling for large datasets
+// TODO: fix data type issues (15/07)
 const sampleData = (records: any[], maxSamples: number = 500): any[] => {
   if (records.length <= maxSamples) return records;
 
-  // Stratified sampling to maintain data distribution
   const step = Math.floor(records.length / maxSamples);
   const sampled = [];
 
@@ -40,30 +72,27 @@ const sampleData = (records: any[], maxSamples: number = 500): any[] => {
   return sampled;
 };
 
-// Data aggregation
 // TODO: fix data type issues (15/07)
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
 const compressCallData = (callData: any, queryType: string): any => {
   const { data } = callData;
 
-  // Different compression strategies based on query type
   switch (queryType) {
     case "disposition":
       return {
         type: "disposition",
         data: {
           totalRecords: data.totalRecords,
-          dispositions: data.dispositions,
+          dispositions: data.fullDispositionCounts || data.dispositions,
+          dispositionBreakdown: data.dispositionBreakdown,
           dateRange: data.dateRange,
+          totalCallsInDataset: data.totalCallsInDataset,
         },
       };
 
     case "agent_performance":
-      // set agent data to key metrics only
+      // Compress agent data to key metrics only
       // TODO: fix data type issues (15/07)
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const compressedAgents: any = {};
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       Object.entries(data.agentMetrics || {}).forEach(
         ([agent, metrics]: [string, any]) => {
           compressedAgents[agent] = {
@@ -84,6 +113,8 @@ const compressCallData = (callData: any, queryType: string): any => {
           totalRecords: data.totalRecords,
           agentMetrics: compressedAgents,
           totalAgents: data.totalAgents,
+          fullDispositionCounts: data.fullDispositionCounts,
+          dispositionBreakdown: data.dispositionBreakdown,
         },
       };
 
@@ -91,9 +122,14 @@ const compressCallData = (callData: any, queryType: string): any => {
       return {
         type: "summary",
         data: {
-          overview: data.overview,
+          overview: {
+            ...data.overview,
+            topDispositions: data.dispositionBreakdown?.slice(0, 5) || data.overview.topDispositions,
+          },
           totalRecords: data.totalRecords,
           dateRange: data.dateRange,
+          fullDispositionCounts: data.fullDispositionCounts,
+          dispositionBreakdown: data.dispositionBreakdown,
         },
       };
 
@@ -106,6 +142,8 @@ const compressCallData = (callData: any, queryType: string): any => {
           quickStats: data.quickStats,
           totalRecords: data.totalRecords,
           samplingNote: `Analysis based on ${sampleRecords.length} representative samples from ${data.totalRecords} total records`,
+          fullDispositionCounts: data.fullDispositionCounts,
+          dispositionBreakdown: data.dispositionBreakdown,
         },
       };
   }
@@ -121,14 +159,16 @@ const calculateSuccessRate = (dispositions: Record<string, number>): number => {
       ([disp]) =>
         disp.toLowerCase().includes("resolved") ||
         disp.toLowerCase().includes("completed") ||
-        disp.toLowerCase().includes("satisfied")
+        disp.toLowerCase().includes("satisfied") ||
+        disp.toLowerCase().includes("successful") ||
+        disp.toLowerCase().includes("closed")
     )
     .reduce((sum, [, count]) => sum + count, 0);
 
   return total > 0 ? (successful / total) * 100 : 0;
 };
 
-// Queuing stuff
+// Queuing functionality
 const processQueue = async (clientIP: string) => {
   const queue = requestQueue.get(clientIP) || [];
   if (queue.length === 0) return;
@@ -143,39 +183,38 @@ const processQueue = async (clientIP: string) => {
     reject(error);
   }
 
-  // next in queue
+  // Process next in queue
   if (queue.length > 0) {
     setTimeout(() => processQueue(clientIP), 2000);
   }
 };
 
-// Chunking
 // TODO: fix data type issues (15/07)
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
 const processLargeRequest = async (requestData: any): Promise<any> => {
-  const { query, callData, queryType } = requestData;
+  const { query, callData, queryType, fullRecords } = requestData;
 
-  // compress
-  const compressedData = compressCallData(callData, queryType);
+  const enhancedCallData = enhanceWithFullDispositions(callData, fullRecords);
+  
+  const compressedData = compressCallData(enhancedCallData, queryType);
   const dataString = JSON.stringify(compressedData);
   const estimatedTokens = estimateTokens(dataString);
 
-  // use chunking strategy
+  // Use chunking strat
   if (estimatedTokens > 8000) {
-    return await processWithChunking(query, callData, queryType);
+    return await processWithChunking(query, enhancedCallData, queryType);
   }
 
   return await processSingleRequest(query, compressedData, queryType);
 };
+
 // TODO: fix data type issues (15/07)
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
 const processWithChunking = async (
   query: string,
   callData: any,
   queryType: string
 ) => {
   const { data } = callData;
-  const chunkSize = 50; // Process 50 records at a time
+  const chunkSize = 50; 
   const chunks = [];
 
   if (data.sampleRecords && data.sampleRecords.length > chunkSize) {
@@ -189,11 +228,15 @@ const processWithChunking = async (
   const chunkResults = [];
 
   for (const chunk of chunks.slice(0, 3)) {
-    // limit === 3 chunks to avoid too many API calls
     const chunkData = {
       type: callData.type,
       data: Array.isArray(chunk)
-        ? { sampleRecords: chunk, totalRecords: data.totalRecords }
+        ? { 
+            sampleRecords: chunk, 
+            totalRecords: data.totalRecords,
+            fullDispositionCounts: data.fullDispositionCounts,
+            dispositionBreakdown: data.dispositionBreakdown,
+          }
         : chunk,
     };
 
@@ -214,13 +257,12 @@ const processWithChunking = async (
   }
 
   const combinedResult = chunkResults[0];
-  combinedResult.response += `\n\n*Note: Analysis based on representative data samples due to large dataset size (${data.totalRecords} total records).*`;
+  combinedResult.response += `\n\n*Note: Analysis based on representative data samples, but disposition counts reflect the complete dataset of ${data.totalRecords} records.*`;
 
   return combinedResult;
 };
 
 // TODO: fix data type issues (15/07)
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
 const processSingleRequest = async (
   query: string,
   callData: any,
@@ -230,6 +272,7 @@ const processSingleRequest = async (
     type: callData.type,
     recordCount: callData.data.totalRecords || 0,
     queryType,
+    hasFullDispositions: !!callData.data.fullDispositionCounts,
   });
 
   const userPrompt = `Query: "${query}"
@@ -237,9 +280,10 @@ const processSingleRequest = async (
 Call Center Data (${callData.type} analysis):
 ${JSON.stringify(callData.data, null, 2)}
 
-Please provide a comprehensive analysis that directly addresses the query with specific insights, metrics, and actionable recommendations.`;
+Please provide a comprehensive analysis that directly addresses the query with specific insights, metrics, and actionable recommendations. 
 
-  // Choose model and token limits based on complexity
+${callData.data.fullDispositionCounts ? 'Note: Full disposition counts are available for the complete dataset.' : ''}`;
+
   const model =
     queryType === "summary" || queryType === "agent_performance"
       ? "gpt-4o"
@@ -265,6 +309,7 @@ Please provide a comprehensive analysis that directly addresses the query with s
       tokensUsed: completion.usage?.total_tokens,
       model,
       dataPoints: callData.data.totalRecords || 0,
+      hasFullDispositions: !!callData.data.fullDispositionCounts,
     },
   };
 };
@@ -301,7 +346,6 @@ const checkRateLimit = (
 };
 
 // TODO: fix data type issues (15/07)
-// eslint-disable-next-line @typescript-eslint/no-unused-vars, @typescript-eslint/no-explicit-any
 const generateSystemPrompt = (queryType: string, dataInfo: any): string => {
   const basePrompt = `You are PRISM, an expert call center analytics AI assistant. You provide actionable insights with specific numbers and percentages.
 
@@ -314,15 +358,45 @@ IMPORTANT GUIDELINES:
 - Focus on business impact and operational improvements
 - Always cite specific numbers from the data
 - Use emojis sparingly but effectively for visual appeal
-- When working with sampled data, acknowledge the sampling and extrapolate insights appropriately`;
+- When working with sampled data, acknowledge the sampling and extrapolate insights appropriately
+- ${dataInfo.hasFullDispositions ? 'Full disposition counts are available for accurate analysis' : 'Work with available disposition data'}
 
-  // ... rest of your existing generateSystemPrompt function
-  return basePrompt; // Simplified for brevity
+QUERY TYPE: ${queryType.toUpperCase()}
+DATASET SIZE: ${dataInfo.recordCount?.toLocaleString() || 'Unknown'} records
+
+${queryType === 'disposition' ? `
+DISPOSITION ANALYSIS FOCUS:
+- Provide exact counts and percentages for each disposition
+- Identify top 5 most common dispositions
+- Calculate success/resolution rates
+- Highlight any concerning disposition patterns
+- Suggest operational improvements based on disposition trends
+` : ''}
+
+${queryType === 'agent_performance' ? `
+AGENT PERFORMANCE FOCUS:
+- Compare agent metrics with team averages
+- Identify top and bottom performers
+- Analyze disposition patterns by agent
+- Suggest coaching opportunities
+- Include disposition success rates by agent
+` : ''}
+
+${queryType === 'summary' ? `
+SUMMARY ANALYSIS FOCUS:
+- Provide high-level overview with key metrics
+- Include disposition breakdown with percentages
+- Highlight major trends and patterns
+- Identify top 3 actionable insights
+- Use visual indicators (📊 📈 📉) for key metrics
+` : ''}`;
+
+  return basePrompt;
 };
 
 export async function POST(request: NextRequest) {
   try {
-    const { query, callData, queryType = "general" } = await request.json();
+    const { query, callData, queryType = "general", fullRecords } = await request.json();
 
     if (!query || !callData) {
       return NextResponse.json(
@@ -340,12 +414,10 @@ export async function POST(request: NextRequest) {
 
     if (!rateCheck.allowed) {
       if (rateCheck.shouldQueue) {
-        // Add to queue
         return new Promise((resolve) => {
           const queue = requestQueue.get(clientIP) || [];
           queue.push({
             // TODO: fix data type issues (15/07)
-            // eslint-disable-next-line @typescript-eslint/no-explicit-any
             resolve: (result: any) => resolve(NextResponse.json(result)),
             reject: () =>
               resolve(
@@ -354,11 +426,10 @@ export async function POST(request: NextRequest) {
                   { status: 500 }
                 )
               ),
-            request: { query, callData, queryType },
+            request: { query, callData, queryType, fullRecords },
           });
           requestQueue.set(clientIP, queue);
 
-          // Start processing queue if not already running
           if (queue.length === 1) {
             setTimeout(() => processQueue(clientIP), 1000);
           }
@@ -375,16 +446,15 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    // Process the request
-    const result = await processLargeRequest({ query, callData, queryType });
+    // Process the request with full records for disposition calculation
+    const result = await processLargeRequest({ query, callData, queryType, fullRecords });
 
     console.log(
-      `✅ Query processed: ${queryType} | Tokens: ${result.metadata?.tokensUsed} | Model: ${result.metadata?.model}`
+      `✅ Query processed: ${queryType} | Tokens: ${result.metadata?.tokensUsed} | Model: ${result.metadata?.model} | Full Dispositions: ${result.metadata?.hasFullDispositions ? 'Yes' : 'No'}`
     );
 
     return NextResponse.json(result);
     // TODO: fix data type issues (15/07)
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
   } catch (error: any) {
     console.error("❌ Error calling OpenAI:", error);
 
