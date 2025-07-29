@@ -133,7 +133,7 @@ const InsightsPage = () => {
   }
 
   return (
-    <div className="flex-1 flex flex-col p-4">
+    <div className="flex-1 flex flex-col p-4 ">
       <div className="mb-4 flex justify-between items-center gap-x-4">
         <div className="text-sm text-gray-600 flex items-center gap-x-4">
           <RefreshButton onRefresh={fetchCallRecords} disabled={loading} />
@@ -154,8 +154,8 @@ const InsightsPage = () => {
           />
         </div>
       </div>
-      <div className="flex gap-x-4">
-        <div className="flex-1">
+      <div className="flex gap-x-4 max-h-[calc(100vh-120px)]">
+        <div className="flex-1 max-h-[calc(100vh-120px)]">
           <InsightsStatsDashboard
             filteredRecords={filteredRecords}
             totalRecords={callRecords.length}
