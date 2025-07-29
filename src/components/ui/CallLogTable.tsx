@@ -374,7 +374,9 @@ const CallLogTable: React.FC<CallLogTableProps> = ({ className }) => {
   }
 
   return (
-    <div className={`w-full flex-1 ${className} flex flex-col max-h-[calc(100vh-120px)]`}>
+    <div
+      className={`w-full flex-1 ${className} flex flex-col max-h-[calc(100vh-120px)]`}
+    >
       <div className="mb-4 flex justify-between items-center gap-x-4">
         <div className="text-sm text-gray-600 flex items-center gap-x-4">
           <RefreshButton onRefresh={fetchCallRecords} disabled={loading} />
@@ -402,8 +404,14 @@ const CallLogTable: React.FC<CallLogTableProps> = ({ className }) => {
 
       {/* body */}
       <div className="flex-1 flex flex-col bg-neutral-800 shadow-sm rounded-lg border border-neutral-800 overflow-hidden">
-        <div className="overflow-auto flex-1 flex flex-col">
-          <table className="w-full table-fixed">
+        <div className="overflow-auto flex-1 flex flex-col  [&::-webkit-scrollbar]:w-2
+  [&::-webkit-scrollbar-track]:rounded-full
+  [&::-webkit-scrollbar-track]:bg-gray-100
+  [&::-webkit-scrollbar-thumb]:rounded-full
+  [&::-webkit-scrollbar-thumb]:bg-gray-300
+  dark:[&::-webkit-scrollbar-track]:bg-neutral-700
+  dark:[&::-webkit-scrollbar-thumb]:bg-neutral-500">
+          <table className="w-full table-fixed ">
             <thead className="bg-black border-b border-neutral-800 sticky top-0 z-10">
               <tr>
                 <th

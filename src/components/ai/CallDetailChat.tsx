@@ -237,7 +237,7 @@ const CallDetailChat: React.FC<CallDetailChatProps> = ({
   };
 
   const quickPrompts = [
-    "Summarize this call",
+    "Summarise this call",
     "Analyse customer sentiment",
     "Extract key topics discussed",
     "Evaluate agent performance",

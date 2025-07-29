@@ -187,7 +187,13 @@ const InsightsStatsDashboard: React.FC<InsightsStatsDashboardProps> = ({
   }
 
   return (
-    <div className="flex-1 p-4 space-y-6 max-h-[calc(100vh-164px)] overflow-y-scroll">
+    <div className="flex-1 p-4 space-y-6 max-h-[calc(100vh-164px)] overflow-y-scroll  [&::-webkit-scrollbar]:w-2
+  [&::-webkit-scrollbar-track]:rounded-full
+  [&::-webkit-scrollbar-track]:bg-gray-100
+  [&::-webkit-scrollbar-thumb]:rounded-full
+  [&::-webkit-scrollbar-thumb]:bg-gray-300
+  dark:[&::-webkit-scrollbar-track]:bg-neutral-700
+  dark:[&::-webkit-scrollbar-thumb]:bg-neutral-500">
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
         <div className="bg-black p-6 rounded-lg shadow-sm">
           <div className="text-2xl font-bold text-emerald-800">

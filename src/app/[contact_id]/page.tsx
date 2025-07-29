@@ -291,7 +291,13 @@ const calculateSentimentStats = (sentimentData: SentimentData[]) => {
 
           <div className="grid grid-cols-3 gap-6">
             {/* Left Column - Call Details */}
-            <div className="space-y-6 max-h-[75vh] overflow-y-scroll">
+            <div className="space-y-6 max-h-[calc(100vh-240px)] overflow-y-scroll [&::-webkit-scrollbar]:w-2
+  [&::-webkit-scrollbar-track]:rounded-full
+  [&::-webkit-scrollbar-track]:bg-gray-100
+  [&::-webkit-scrollbar-thumb]:rounded-full
+  [&::-webkit-scrollbar-thumb]:bg-gray-300
+  dark:[&::-webkit-scrollbar-track]:bg-neutral-700
+  dark:[&::-webkit-scrollbar-thumb]:bg-neutral-500">
               {/* Call Overview */}
               <div className="bg-black rounded-lg shadow-sm p-6">
                 <h2 className="text-xl font-semibold text-emerald-800 mb-4">
@@ -580,7 +586,13 @@ const calculateSentimentStats = (sentimentData: SentimentData[]) => {
             </div>
 
             {/* Middle Column - Transcript */}
-            <div className="bg-black rounded-lg shadow-sm p-6 max-h-[75vh] overflow-y-scroll">
+            <div className="bg-black rounded-lg shadow-sm p-6 max-h-[calc(100vh-240px)] overflow-y-scroll [&::-webkit-scrollbar]:w-2
+  [&::-webkit-scrollbar-track]:rounded-full
+  [&::-webkit-scrollbar-track]:bg-gray-100
+  [&::-webkit-scrollbar-thumb]:rounded-full
+  [&::-webkit-scrollbar-thumb]:bg-gray-300
+  dark:[&::-webkit-scrollbar-track]:bg-neutral-700
+  dark:[&::-webkit-scrollbar-thumb]:bg-neutral-500">
               <div className="flex items-center justify-between mb-4">
                 <h2 className="text-xl font-semibold text-emerald-800">
                   Transcript
@@ -595,7 +607,7 @@ const calculateSentimentStats = (sentimentData: SentimentData[]) => {
             </div>
 
             {/* Right Column - Chat Interface */}
-            <div className="bg-black rounded-lg shadow-sm p-0 flex flex-col max-h-[75vh]">
+            <div className="bg-black rounded-lg shadow-sm p-0 flex flex-col max-h-[calc(100vh-240px)]">
               <CallDetailChat
                 callRecord={callRecord}
                 transcriptData={transcriptData}
