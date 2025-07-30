@@ -5,7 +5,6 @@ import CallRecord from "@/types/CallRecord";
 import CallLogFilters, {
   FilterPeriod,
 } from "../../components/ui/CallLogFilters";
-import RefreshButton from "../../components/ui/RefreshButton";
 import InsightsStatsDashboard from "../../components/dashboards/InsightsStatsDashboard";
 import CallRecordsChat from "../../components/ai/CallRecordsChat";
 
