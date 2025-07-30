@@ -187,7 +187,7 @@ const InsightsStatsDashboard: React.FC<InsightsStatsDashboardProps> = ({
   }
 
   return (
-    <div className="flex-1 p-4 space-y-6 max-h-[calc(100vh-164px)] overflow-y-scroll  [&::-webkit-scrollbar]:w-2
+    <div className="flex-1 p-4 space-y-6 max-h-[calc(100vh-220px)] overflow-y-scroll  [&::-webkit-scrollbar]:w-2
   [&::-webkit-scrollbar-track]:rounded-full
   [&::-webkit-scrollbar-track]:bg-gray-100
   [&::-webkit-scrollbar-thumb]:rounded-full

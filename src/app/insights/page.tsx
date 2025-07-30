@@ -15,6 +15,9 @@ const InsightsPage = () => {
   const [error, setError] = useState<string | null>(null);
   const [filterPeriod, setFilterPeriod] = useState<FilterPeriod>("today");
   const [selectedAgent, setSelectedAgent] = useState<string>("");
+  const [selectedDisposition, setSelectedDisposition] = useState<string>("");
+  const [startDate, setStartDate] = useState<string>("");
+  const [endDate, setEndDate] = useState<string>("");
 
   // get agents
   const uniqueAgents = useMemo(() => {
@@ -25,12 +28,27 @@ const InsightsPage = () => {
     return agents as string[];
   }, [callRecords]);
 
+  // get dispositions
+  const uniqueDispositions = useMemo(() => {
+    const dispositions = callRecords
+      .map((record) => record.disposition_title)
+      .filter((disposition, index, array) => disposition && array.indexOf(disposition) === index)
+      .sort();
+    return dispositions as string[];
+  }, [callRecords]);
+
   const filteredRecords = useMemo(() => {
     let filtered = callRecords;
 
     if (selectedAgent) {
       filtered = filtered.filter(
         (record) => record.agent_username === selectedAgent
+      );
+    }
+
+    if (selectedDisposition) {
+      filtered = filtered.filter(
+        (record) => record.disposition_title === selectedDisposition
       );
     }
 
@@ -68,15 +86,53 @@ const InsightsPage = () => {
           thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
           return recordDate >= thirtyDaysAgo;
 
+        case "dateRange":
+          if (!startDate && !endDate) return true;
+          
+          const start = startDate ? new Date(startDate) : null;
+          const end = endDate ? new Date(endDate) : null;
+          
+          // Set time to start and end of day for proper comparison
+          if (start) {
+            start.setHours(0, 0, 0, 0);
+          }
+          if (end) {
+            end.setHours(23, 59, 59, 999);
+          }
+          
+          const recordDateTime = new Date(record.initiation_timestamp);
+          
+          if (start && end) {
+            return recordDateTime >= start && recordDateTime <= end;
+          } else if (start) {
+            return recordDateTime >= start;
+          } else if (end) {
+            return recordDateTime <= end;
+          }
+          
+          return true;
+
         default:
           return true;
       }
     });
-  }, [callRecords, filterPeriod, selectedAgent]);
+  }, [callRecords, filterPeriod, selectedAgent, selectedDisposition, startDate, endDate]);
 
   useEffect(() => {
     fetchCallRecords();
   }, []);
+
+  // Initialize default dates when dateRange is selected
+  useEffect(() => {
+    if (filterPeriod === "dateRange" && !startDate && !endDate) {
+      const today = new Date();
+      const sevenDaysAgo = new Date();
+      sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
+      
+      setStartDate(sevenDaysAgo.toISOString().split('T')[0]);
+      setEndDate(today.toISOString().split('T')[0]);
+    }
+  }, [filterPeriod, startDate, endDate]);
 
   const fetchCallRecords = async () => {
     try {
@@ -106,13 +162,32 @@ const InsightsPage = () => {
     }
   };
 
+  
   const handleFilterChange = (filter: FilterPeriod) => {
     setFilterPeriod(filter);
+    
+    if (filter !== "dateRange") {
+      setStartDate("");
+      setEndDate("");
+    }
   };
 
   const handleAgentChange = (agent: string) => {
     setSelectedAgent(agent);
   };
+
+  const handleDispositionChange = (disposition: string) => {
+    setSelectedDisposition(disposition);
+  };
+
+  const handleStartDateChange = (date: string) => {
+    setStartDate(date);
+  };
+
+  const handleEndDateChange = (date: string) => {
+    setEndDate(date);
+  };
+  
 
   if (error) {
     return (
@@ -134,35 +209,47 @@ const InsightsPage = () => {
 
   return (
     <div className="flex-1 flex flex-col p-4 ">
-      <div className="mb-4 flex justify-between items-center gap-x-4">
-        <div className="text-sm text-gray-600 flex items-center gap-x-4">
-          <RefreshButton onRefresh={fetchCallRecords} disabled={loading} />
-          {!loading && (
-            <>
-              Analysing {filteredRecords.length} of {callRecords.length} records
-            </>
-          )}
-        </div>
+      <div className="mb-4 flex flex-col gap-4">
+        {/* <div className="flex justify-between items-center">
+          <div className="text-sm text-gray-600 flex items-center gap-x-4">
+            <RefreshButton onRefresh={fetchCallRecords} disabled={loading} />
+            {!loading && (
+              <>
+                Analysing {filteredRecords.length} of {callRecords.length} records
+              </>
+            )}
+          </div>
+        </div> */}
 
-        <div className="flex items-center gap-3 flex-1">
+        <div className="flex justify-center">
           <CallLogFilters
             selectedFilter={filterPeriod}
             onFilterChange={handleFilterChange}
             selectedAgent={selectedAgent}
             onAgentChange={handleAgentChange}
             agents={uniqueAgents}
+            selectedDisposition={selectedDisposition}
+            onDispositionChange={handleDispositionChange}
+            dispositions={uniqueDispositions}
+            startDate={startDate}
+            endDate={endDate}
+            onStartDateChange={handleStartDateChange}
+            onEndDateChange={handleEndDateChange}
+            onRefresh={fetchCallRecords}
+            disabled={loading}
           />
         </div>
       </div>
-      <div className="flex gap-x-4 max-h-[calc(100vh-120px)]">
-        <div className="flex-1 max-h-[calc(100vh-120px)]">
+      
+      <div className="flex gap-x-4 max-h-[calc(100vh-160px)]">
+        <div className="flex-1 max-h-[calc(100vh-160px)]">
           <InsightsStatsDashboard
             filteredRecords={filteredRecords}
             totalRecords={callRecords.length}
             loading={loading}
           />
         </div>
-        <div className="w-[30vw] min-w-[360px] max-w-[640px] h-[85vh]">
+        <div className="w-[30vw] min-w-[360px] max-w-[640px] max-h-[calc(100vh-220px)]">
           <CallRecordsChat
             filteredRecords={filteredRecords}
             totalRecords={callRecords.length}

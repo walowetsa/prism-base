@@ -3,7 +3,6 @@
 import { useState, useEffect, useRef, useMemo } from "react";
 import CallRecord from "@/types/CallRecord";
 import CallLogFilters, { FilterPeriod } from "./CallLogFilters";
-import RefreshButton from "./RefreshButton";
 import Link from "next/link";
 
 interface CallLogTableProps {
@@ -30,6 +29,9 @@ const CallLogTable: React.FC<CallLogTableProps> = ({ className }) => {
   });
   const [filterPeriod, setFilterPeriod] = useState<FilterPeriod>("today");
   const [selectedAgent, setSelectedAgent] = useState<string>("");
+  const [selectedDisposition, setSelectedDisposition] = useState<string>("");
+  const [startDate, setStartDate] = useState<string>("");
+  const [endDate, setEndDate] = useState<string>("");
   const dropdownRef = useRef<HTMLDivElement>(null);
 
   const recordsPerPage = 100;
@@ -42,12 +44,26 @@ const CallLogTable: React.FC<CallLogTableProps> = ({ className }) => {
     return agents as string[];
   }, [callRecords]);
 
+  const uniqueDispositions = useMemo(() => {
+    const dispositions = callRecords
+      .map((record) => record.disposition_title)
+      .filter((disposition, index, array) => disposition && array.indexOf(disposition) === index)
+      .sort();
+    return dispositions as string[];
+  }, [callRecords]);
+
   const filteredRecords = useMemo(() => {
     let filtered = callRecords;
 
     if (selectedAgent) {
       filtered = filtered.filter(
         (record) => record.agent_username === selectedAgent
+      );
+    }
+
+    if (selectedDisposition) {
+      filtered = filtered.filter(
+        (record) => record.disposition_title === selectedDisposition
       );
     }
 
@@ -85,11 +101,36 @@ const CallLogTable: React.FC<CallLogTableProps> = ({ className }) => {
           thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
           return recordDate >= thirtyDaysAgo;
 
+        case "dateRange":
+          if (!startDate && !endDate) return true;
+          
+          const start = startDate ? new Date(startDate) : null;
+          const end = endDate ? new Date(endDate) : null;
+          
+          if (start) {
+            start.setHours(0, 0, 0, 0);
+          }
+          if (end) {
+            end.setHours(23, 59, 59, 999);
+          }
+          
+          const recordDateTime = new Date(record.initiation_timestamp);
+          
+          if (start && end) {
+            return recordDateTime >= start && recordDateTime <= end;
+          } else if (start) {
+            return recordDateTime >= start;
+          } else if (end) {
+            return recordDateTime <= end;
+          }
+          
+          return true;
+
         default:
           return true;
       }
     });
-  }, [callRecords, filterPeriod, selectedAgent]);
+  }, [callRecords, filterPeriod, selectedAgent, selectedDisposition, startDate, endDate]);
 
   const sortedRecords = useMemo(() => {
     if (!sortState.field) return filteredRecords;
@@ -153,6 +194,17 @@ const CallLogTable: React.FC<CallLogTableProps> = ({ className }) => {
       document.removeEventListener("mousedown", handleClickOutside);
     };
   }, []);
+
+  useEffect(() => {
+    if (filterPeriod === "dateRange" && !startDate && !endDate) {
+      const today = new Date();
+      const sevenDaysAgo = new Date();
+      sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
+      
+      setStartDate(sevenDaysAgo.toISOString().split('T')[0]);
+      setEndDate(today.toISOString().split('T')[0]);
+    }
+  }, [filterPeriod, startDate, endDate]);
 
   const fetchCallRecords = async () => {
     try {
@@ -269,7 +321,6 @@ const CallLogTable: React.FC<CallLogTableProps> = ({ className }) => {
   };
 
   const handleMoreDetails = (record: CallRecord) => {
-    // TODO: add routing to call log overview/transcription page
     console.log("More details for record:", record);
     setOpenDropdownId(null);
   };
@@ -303,10 +354,30 @@ const CallLogTable: React.FC<CallLogTableProps> = ({ className }) => {
   const handleFilterChange = (filter: FilterPeriod) => {
     setFilterPeriod(filter);
     setCurrentPage(1);
+    
+    if (filter !== "dateRange") {
+      setStartDate("");
+      setEndDate("");
+    }
   };
 
   const handleAgentChange = (agent: string) => {
     setSelectedAgent(agent);
+    setCurrentPage(1);
+  };
+
+  const handleDispositionChange = (disposition: string) => {
+    setSelectedDisposition(disposition);
+    setCurrentPage(1);
+  };
+
+  const handleStartDateChange = (date: string) => {
+    setStartDate(date);
+    setCurrentPage(1);
+  };
+
+  const handleEndDateChange = (date: string) => {
+    setEndDate(date);
     setCurrentPage(1);
   };
 
@@ -378,12 +449,6 @@ const CallLogTable: React.FC<CallLogTableProps> = ({ className }) => {
       className={`w-full flex-1 ${className} flex flex-col max-h-[calc(100vh-120px)]`}
     >
       <div className="mb-4 flex justify-between items-center gap-x-4">
-        <div className="text-sm text-gray-600 flex items-center gap-x-4">
-          <RefreshButton onRefresh={fetchCallRecords} disabled={loading} />
-          Showing {startIndex + 1}-{Math.min(endIndex, sortedRecords.length)} of{" "}
-          {sortedRecords.length} records
-        </div>
-
         <div className="flex items-center gap-3 flex-1">
           <CallLogFilters
             selectedFilter={filterPeriod}
@@ -391,14 +456,16 @@ const CallLogTable: React.FC<CallLogTableProps> = ({ className }) => {
             selectedAgent={selectedAgent}
             onAgentChange={handleAgentChange}
             agents={uniqueAgents}
+            selectedDisposition={selectedDisposition}
+            onDispositionChange={handleDispositionChange}
+            dispositions={uniqueDispositions}
+            startDate={startDate}
+            endDate={endDate}
+            onStartDateChange={handleStartDateChange}
+            onEndDateChange={handleEndDateChange}
+            onRefresh={fetchCallRecords}
+            disabled={loading}
           />
-        </div>
-        <div>
-          <Link href={"/insights"}>
-            <button className="px-3 py-1.5 text-sm font-bold rounded-full bg-emerald-800 text-white min-w-[150px] cursor-pointer">
-              Insights
-            </button>
-          </Link>
         </div>
       </div>
 
