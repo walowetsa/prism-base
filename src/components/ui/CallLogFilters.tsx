@@ -193,22 +193,20 @@ const CallLogFilters: React.FC<CallLogFiltersProps> = ({
               )} ${
                 index === 0
                   ? "rounded-l-full rounded-r-md"
-                  : index === filterOptions.length - 1
+                  : index === filterOptions.length - 2
                   ? "rounded-r-full rounded-l-md"
-                  : ""
+                  : index === filterOptions.length - 1
+                  ? "ml-4"
+                  : "rounded-none"
               }`}
             >
               {option.label}
             </button>
           ))}
 
-          {/* date range inputs - only show when dateRange is selected */}
           {selectedFilter === "dateRange" && (
-            <div className="flex items-center gap-2 p-2 bg-gray-50 rounded-lg border border-gray-200">
+            <div className="ml-8 flex items-center gap-2 p-2 rounded-lg">
               <div className="flex items-center gap-2">
-                <label className="text-sm font-medium text-gray-700">
-                  From:
-                </label>
                 <input
                   type="date"
                   value={startDate || getDefaultStartDate()}
@@ -217,7 +215,7 @@ const CallLogFilters: React.FC<CallLogFiltersProps> = ({
                 />
               </div>
               <div className="flex items-center gap-2">
-                <label className="text-sm font-medium text-gray-700">To:</label>
+                <label className="text-sm font-bold text-emerald-800">-</label>
                 <input
                   type="date"
                   value={endDate || getTodayDate()}
