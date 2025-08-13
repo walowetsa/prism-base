@@ -286,7 +286,7 @@ ${callData.data.fullDispositionCounts ? 'Note: Full disposition counts are avail
 
   const model =
     queryType === "summary" || queryType === "agent_performance"
-      ? "gpt-4o"
+      ? "gpt-5-thinking"
       : "gpt-4o-mini";
   const maxTokens = queryType === "summary" ? 3000 : 2000;
 
