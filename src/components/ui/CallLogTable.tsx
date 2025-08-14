@@ -29,7 +29,7 @@ const CallLogTable: React.FC<CallLogTableProps> = ({ className }) => {
   });
   const [filterPeriod, setFilterPeriod] = useState<FilterPeriod>("today");
   const [selectedAgent, setSelectedAgent] = useState<string>("");
-  const [selectedDisposition, setSelectedDisposition] = useState<string>("");
+  const [selectedDispositions, setSelectedDispositions] = useState<string[]>([]);
   const [startDate, setStartDate] = useState<string>("");
   const [endDate, setEndDate] = useState<string>("");
   const dropdownRef = useRef<HTMLDivElement>(null);
@@ -61,9 +61,9 @@ const CallLogTable: React.FC<CallLogTableProps> = ({ className }) => {
       );
     }
 
-    if (selectedDisposition) {
+    if (selectedDispositions.length > 0) {
       filtered = filtered.filter(
-        (record) => record.disposition_title === selectedDisposition
+        (record) => record.disposition_title && selectedDispositions.includes(record.disposition_title)
       );
     }
 
@@ -130,7 +130,7 @@ const CallLogTable: React.FC<CallLogTableProps> = ({ className }) => {
           return true;
       }
     });
-  }, [callRecords, filterPeriod, selectedAgent, selectedDisposition, startDate, endDate]);
+  }, [callRecords, filterPeriod, selectedAgent, selectedDispositions, startDate, endDate]);
 
   const sortedRecords = useMemo(() => {
     if (!sortState.field) return filteredRecords;
@@ -366,8 +366,8 @@ const CallLogTable: React.FC<CallLogTableProps> = ({ className }) => {
     setCurrentPage(1);
   };
 
-  const handleDispositionChange = (disposition: string) => {
-    setSelectedDisposition(disposition);
+  const handleDispositionsChange = (dispositions: string[]) => {
+    setSelectedDispositions(dispositions);
     setCurrentPage(1);
   };
 
@@ -456,8 +456,8 @@ const CallLogTable: React.FC<CallLogTableProps> = ({ className }) => {
             selectedAgent={selectedAgent}
             onAgentChange={handleAgentChange}
             agents={uniqueAgents}
-            selectedDisposition={selectedDisposition}
-            onDispositionChange={handleDispositionChange}
+            selectedDispositions={selectedDispositions}
+            onDispositionsChange={handleDispositionsChange}
             dispositions={uniqueDispositions}
             startDate={startDate}
             endDate={endDate}

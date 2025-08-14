@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useMemo, useState } from "react";
+import { useMemo, useState, useRef, useEffect } from "react";
 import { usePathname } from "next/navigation";
 
 export type FilterPeriod =
@@ -18,8 +18,8 @@ interface CallLogFiltersProps {
   selectedAgent: string;
   onAgentChange: (agent: string) => void;
   agents: string[];
-  selectedDisposition: string;
-  onDispositionChange: (disposition: string) => void;
+  selectedDispositions: string[]; // Changed from selectedDisposition
+  onDispositionsChange: (dispositions: string[]) => void; // Changed from onDispositionChange
   dispositions: string[];
   startDate: string;
   endDate: string;
@@ -36,8 +36,8 @@ const CallLogFilters: React.FC<CallLogFiltersProps> = ({
   selectedAgent,
   onAgentChange,
   agents,
-  selectedDisposition,
-  onDispositionChange,
+  selectedDispositions, // Updated prop name
+  onDispositionsChange, // Updated prop name
   dispositions,
   startDate,
   endDate,
@@ -48,6 +48,8 @@ const CallLogFilters: React.FC<CallLogFiltersProps> = ({
   className,
 }) => {
   const [isRefreshing, setIsRefreshing] = useState(false);
+  const [isDispositionDropdownOpen, setIsDispositionDropdownOpen] = useState(false);
+  const dispositionDropdownRef = useRef<HTMLDivElement>(null);
 
   const filterOptions = useMemo(
     () => [
@@ -60,6 +62,23 @@ const CallLogFilters: React.FC<CallLogFiltersProps> = ({
     ],
     []
   );
+
+  // Close dropdown when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (
+        dispositionDropdownRef.current &&
+        !dispositionDropdownRef.current.contains(event.target as Node)
+      ) {
+        setIsDispositionDropdownOpen(false);
+      }
+    };
+
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => {
+      document.removeEventListener("mousedown", handleClickOutside);
+    };
+  }, []);
 
   const getButtonClass = (isSelected: boolean) => {
     const baseClass =
@@ -99,7 +118,28 @@ const CallLogFilters: React.FC<CallLogFiltersProps> = ({
     }
   };
 
-  const pathname = usePathname()
+  const handleDispositionToggle = (disposition: string) => {
+    const isSelected = selectedDispositions.includes(disposition);
+    if (isSelected) {
+      onDispositionsChange(selectedDispositions.filter(d => d !== disposition));
+    } else {
+      onDispositionsChange([...selectedDispositions, disposition]);
+    }
+  };
+
+  const getDispositionDisplayText = () => {
+    if (selectedDispositions.length === 0) {
+      return "All Dispositions";
+    } else if (selectedDispositions.length === 1) {
+      return selectedDispositions[0];
+    } else if (selectedDispositions.length <= 2) {
+      return selectedDispositions.join(", ");
+    } else {
+      return `${selectedDispositions.length} selected`;
+    }
+  };
+
+  const pathname = usePathname();
 
   return (
     <div className={`flex gap-4 ${className} flex-col w-full`}>
@@ -154,28 +194,67 @@ const CallLogFilters: React.FC<CallLogFiltersProps> = ({
           </select>
         </div>
 
-        {/* filter by disposition */}
-        <div className="flex items-center">
+        {/* filter by disposition - multiselect */}
+        <div className="flex items-center" ref={dispositionDropdownRef}>
           <label
             htmlFor="disposition-select"
             className="mr-2 text-sm font-medium text-gray-700"
           >
             Disposition:
           </label>
-          <select
-            id="disposition-select"
-            value={selectedDisposition}
-            onChange={(e) => onDispositionChange(e.target.value)}
-            className="px-3 py-1.5 text-sm border border-gray-300 rounded-full bg-neutral-200 text-gray-700 hover:border-gray-400 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 transition-colors duration-200 min-w-[200px]"
-          >
-            <option value="">All Dispositions</option>
-            {dispositions.map((disposition) => (
-              <option key={disposition} value={disposition}>
-                {disposition}
-              </option>
-            ))}
-          </select>
+          <div className="relative">
+            <button
+              type="button"
+              onClick={() => setIsDispositionDropdownOpen(!isDispositionDropdownOpen)}
+              className="px-3 py-1.5 text-sm border border-gray-300 rounded-full bg-neutral-200 text-gray-700 hover:border-gray-400 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 transition-colors duration-200 min-w-[200px] flex justify-between items-center"
+            >
+              <span className="truncate">{getDispositionDisplayText()}</span>
+              <svg
+                className={`w-4 h-4 transition-transform ${
+                  isDispositionDropdownOpen ? 'rotate-180' : ''
+                }`}
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+              </svg>
+            </button>
+
+            {isDispositionDropdownOpen && (
+              <div className="absolute z-[100] mt-1 w-full bg-white border border-gray-300 rounded-md shadow-lg max-h-60 overflow-auto">
+                <div className="py-1">
+                  {dispositions.map((disposition) => (
+                    <label
+                      key={disposition}
+                      className="flex items-center px-3 py-2 hover:bg-gray-50 cursor-pointer"
+                    >
+                      <input
+                        type="checkbox"
+                        checked={selectedDispositions.includes(disposition)}
+                        onChange={() => handleDispositionToggle(disposition)}
+                        className="mr-2 h-4 w-4 text-emerald-600 focus:ring-emerald-500 border-gray-300 rounded"
+                      />
+                      <span className="text-sm text-gray-700">{disposition}</span>
+                    </label>
+                  ))}
+                </div>
+                {selectedDispositions.length > 0 && (
+                  <div className="border-t border-gray-200 px-3 py-2">
+                    <button
+                      type="button"
+                      onClick={() => onDispositionsChange([])}
+                      className="text-sm text-emerald-600 hover:text-emerald-800 font-medium"
+                    >
+                      Clear all
+                    </button>
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
         </div>
+
         <div className="ml-auto">
           {
             pathname === '/insights' ?
