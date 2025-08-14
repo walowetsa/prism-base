@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { useMemo, useState } from "react";
+import { usePathname } from "next/navigation";
 
 export type FilterPeriod =
   | "all"
@@ -98,6 +99,8 @@ const CallLogFilters: React.FC<CallLogFiltersProps> = ({
     }
   };
 
+  const pathname = usePathname()
+
   return (
     <div className={`flex gap-4 ${className} flex-col w-full`}>
       <div className="flex gap-x-4">
@@ -174,11 +177,21 @@ const CallLogFilters: React.FC<CallLogFiltersProps> = ({
           </select>
         </div>
         <div className="ml-auto">
+          {
+            pathname === '/insights' ?
+          <Link href={"/"}>
+            <button className="px-3 py-1.5 text-sm border-none font-bold rounded-md bg-emerald-800 text-white min-w-[150px] cursor-pointer">
+              View Call Logs
+            </button>
+          </Link> :
+
           <Link href={"/insights"}>
             <button className="px-3 py-1.5 text-sm border-none font-bold rounded-md bg-emerald-800 text-white min-w-[150px] cursor-pointer">
               View Insights
             </button>
           </Link>
+            
+          }
         </div>
       </div>
       <div className="flex flex-col">
