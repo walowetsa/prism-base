@@ -118,6 +118,14 @@ const CallLogFilters: React.FC<CallLogFiltersProps> = ({
     }
   };
 
+  const handleResetAllFilters = () => {
+    onFilterChange("today");
+    onAgentChange("");
+    onDispositionsChange([]);
+    onStartDateChange("");
+    onEndDateChange("");
+  };
+
   const handleDispositionToggle = (disposition: string) => {
     const isSelected = selectedDispositions.includes(disposition);
     if (isSelected) {
@@ -132,8 +140,6 @@ const CallLogFilters: React.FC<CallLogFiltersProps> = ({
       return "All Dispositions";
     } else if (selectedDispositions.length === 1) {
       return selectedDispositions[0];
-    } else if (selectedDispositions.length <= 2) {
-      return selectedDispositions.join(", ");
     } else {
       return `${selectedDispositions.length} selected`;
     }
@@ -170,7 +176,6 @@ const CallLogFilters: React.FC<CallLogFiltersProps> = ({
             </svg>
           </button>
         </div>
-
         {/* filter by agent */}
         <div className="flex items-center">
           <label
@@ -253,6 +258,31 @@ const CallLogFilters: React.FC<CallLogFiltersProps> = ({
               </div>
             )}
           </div>
+
+        <div className="flex items-center ml-12">
+          <button
+            onClick={handleResetAllFilters}
+            disabled={disabled}
+            className="px-3 py-1.5 text-sm font-medium rounded-md bg-emerald-800 text-white flex items-center gap-2 cursor-pointer"
+            title="Reset all filters"
+          >
+            <svg
+              className="w-4 h-4"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+              xmlns="http://www.w3.org/2000/svg"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                d="M6 18L18 6M6 6l12 12"
+              />
+            </svg>
+            Reset Filters
+          </button>
+        </div>
         </div>
 
         <div className="ml-auto">
