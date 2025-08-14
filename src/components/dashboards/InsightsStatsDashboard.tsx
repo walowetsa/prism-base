@@ -153,6 +153,7 @@ const InsightsStatsDashboard: React.FC<InsightsStatsDashboardProps> = ({
       { name: "Negative", count: sentimentCounts.NEGATIVE, color: "#dc2626" },
     ];
 
+
     return {
       totalCalls,
       successfulCalls,
@@ -185,7 +186,7 @@ const InsightsStatsDashboard: React.FC<InsightsStatsDashboardProps> = ({
       </div>
     );
   }
-
+  
   return (
     <div className="flex-1 p-4 space-y-6 max-h-[calc(100vh-220px)] overflow-y-scroll  [&::-webkit-scrollbar]:w-2
   [&::-webkit-scrollbar-track]:rounded-full
@@ -399,7 +400,7 @@ const InsightsStatsDashboard: React.FC<InsightsStatsDashboardProps> = ({
                   style={{ backgroundColor: item.color }}
                 ></div>
                 <span className="text-sm text-neutral-200">
-                  {item.name}: {item.count}
+                  {item.name}: {(Math.floor(item.count)/(statistics.sentimentData[0].count + statistics.sentimentData[1].count + statistics.sentimentData[2].count) * 100).toFixed(2)}%
                 </span>
               </div>
             ))}
