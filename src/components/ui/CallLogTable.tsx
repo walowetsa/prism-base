@@ -29,7 +29,9 @@ const CallLogTable: React.FC<CallLogTableProps> = ({ className }) => {
   });
   const [filterPeriod, setFilterPeriod] = useState<FilterPeriod>("today");
   const [selectedAgent, setSelectedAgent] = useState<string>("");
-  const [selectedDispositions, setSelectedDispositions] = useState<string[]>([]);
+  const [selectedDispositions, setSelectedDispositions] = useState<string[]>(
+    []
+  );
   const [startDate, setStartDate] = useState<string>("");
   const [endDate, setEndDate] = useState<string>("");
   const dropdownRef = useRef<HTMLDivElement>(null);
@@ -47,7 +49,10 @@ const CallLogTable: React.FC<CallLogTableProps> = ({ className }) => {
   const uniqueDispositions = useMemo(() => {
     const dispositions = callRecords
       .map((record) => record.disposition_title)
-      .filter((disposition, index, array) => disposition && array.indexOf(disposition) === index)
+      .filter(
+        (disposition, index, array) =>
+          disposition && array.indexOf(disposition) === index
+      )
       .sort();
     return dispositions as string[];
   }, [callRecords]);
@@ -63,7 +68,9 @@ const CallLogTable: React.FC<CallLogTableProps> = ({ className }) => {
 
     if (selectedDispositions.length > 0) {
       filtered = filtered.filter(
-        (record) => record.disposition_title && selectedDispositions.includes(record.disposition_title)
+        (record) =>
+          record.disposition_title &&
+          selectedDispositions.includes(record.disposition_title)
       );
     }
 
@@ -103,19 +110,19 @@ const CallLogTable: React.FC<CallLogTableProps> = ({ className }) => {
 
         case "dateRange":
           if (!startDate && !endDate) return true;
-          
+
           const start = startDate ? new Date(startDate) : null;
           const end = endDate ? new Date(endDate) : null;
-          
+
           if (start) {
             start.setHours(0, 0, 0, 0);
           }
           if (end) {
             end.setHours(23, 59, 59, 999);
           }
-          
+
           const recordDateTime = new Date(record.initiation_timestamp);
-          
+
           if (start && end) {
             return recordDateTime >= start && recordDateTime <= end;
           } else if (start) {
@@ -123,14 +130,21 @@ const CallLogTable: React.FC<CallLogTableProps> = ({ className }) => {
           } else if (end) {
             return recordDateTime <= end;
           }
-          
+
           return true;
 
         default:
           return true;
       }
     });
-  }, [callRecords, filterPeriod, selectedAgent, selectedDispositions, startDate, endDate]);
+  }, [
+    callRecords,
+    filterPeriod,
+    selectedAgent,
+    selectedDispositions,
+    startDate,
+    endDate,
+  ]);
 
   const sortedRecords = useMemo(() => {
     if (!sortState.field) return filteredRecords;
@@ -200,9 +214,9 @@ const CallLogTable: React.FC<CallLogTableProps> = ({ className }) => {
       const today = new Date();
       const sevenDaysAgo = new Date();
       sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
-      
-      setStartDate(sevenDaysAgo.toISOString().split('T')[0]);
-      setEndDate(today.toISOString().split('T')[0]);
+
+      setStartDate(sevenDaysAgo.toISOString().split("T")[0]);
+      setEndDate(today.toISOString().split("T")[0]);
     }
   }, [filterPeriod, startDate, endDate]);
 
@@ -354,7 +368,7 @@ const CallLogTable: React.FC<CallLogTableProps> = ({ className }) => {
   const handleFilterChange = (filter: FilterPeriod) => {
     setFilterPeriod(filter);
     setCurrentPage(1);
-    
+
     if (filter !== "dateRange") {
       setStartDate("");
       setEndDate("");
@@ -471,13 +485,15 @@ const CallLogTable: React.FC<CallLogTableProps> = ({ className }) => {
 
       {/* body */}
       <div className="flex-1 flex flex-col bg-neutral-800 shadow-sm rounded-lg border border-neutral-800 overflow-hidden">
-        <div className="overflow-auto flex-1 flex flex-col  [&::-webkit-scrollbar]:w-2
+        <div
+          className="overflow-auto flex-1 flex flex-col  [&::-webkit-scrollbar]:w-2
   [&::-webkit-scrollbar-track]:rounded-full
   [&::-webkit-scrollbar-track]:bg-gray-100
   [&::-webkit-scrollbar-thumb]:rounded-full
   [&::-webkit-scrollbar-thumb]:bg-gray-300
   dark:[&::-webkit-scrollbar-track]:bg-neutral-700
-  dark:[&::-webkit-scrollbar-thumb]:bg-neutral-500">
+  dark:[&::-webkit-scrollbar-thumb]:bg-neutral-500"
+        >
           <table className="w-full table-fixed ">
             <thead className="bg-black border-b border-neutral-800 sticky top-0 z-10">
               <tr>
@@ -527,7 +543,10 @@ const CallLogTable: React.FC<CallLogTableProps> = ({ className }) => {
                   className="hover:bg-neutral-600 transition-colors"
                 >
                   <td className="px-4 py-3 text-sm text-white w-64 truncate">
-                    {record.agent_username || "N/A"}
+                    {
+                      record.agent_username === 'T10085496@tsagroup.com.au' ? 'mdunstan@tsagroup.com.au' : record.agent_username === 'T10085497@tsagroup.com.au' ? 'mwilson.tsagroup.com.au' : record.agent_username === 'T10085494@tsagroup.com.au' ? 'vride.tsagroup.com.au' : record.agent_username === 'T10085498@tsagroup.com.au' ? 'bskipper.tsagroup.com.au' : record.agent_username === 'T10085495@tsagroup.com.au' ? 'ksingh@tsagroup.com.au' : record.agent_username === 'T10085499@tsagroup.com.au' ? 'elima@tsagroup.com.au' : record.agent_username === 'T10085523@tsagroup.com.au' ? 'srana@tsagroup.com.au' : record.agent_username === 'T10085526@tsagroup.com.au' ? 'ezgrajewski@tsagroup.com.au' : record.agent_username === 'T10085531@tsagroup.com.au' ? 'hcrooks.tsagroup.com.au' : record.agent_username
+                    }
+                    {/* {record.agent_username || "N/A"} */}
                   </td>
                   <td className="px-4 py-3 text-sm text-white w-64">
                     {formatTimestamp(record.initiation_timestamp)}

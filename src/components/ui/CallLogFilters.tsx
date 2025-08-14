@@ -193,7 +193,10 @@ const CallLogFilters: React.FC<CallLogFiltersProps> = ({
             <option value="">All Agents</option>
             {agents.map((agent) => (
               <option key={agent} value={agent}>
-                {agent}
+                {                      agent === 'T10085496@tsagroup.com.au' ? 'mdunstan@tsagroup.com.au' : agent === 'T10085497@tsagroup.com.au' ? 'mwilson.tsagroup.com.au' : agent === 'T10085494@tsagroup.com.au' ? 'vride.tsagroup.com.au' : agent === 'T10085498@tsagroup.com.au' ? 'bskipper.tsagroup.com.au' : agent === 'T10085495@tsagroup.com.au' ? 'ksingh@tsagroup.com.au' : agent === 'T10085499@tsagroup.com.au' ? 'elima@tsagroup.com.au' : agent === 'T10085523@tsagroup.com.au' ? 'srana@tsagroup.com.au' : agent === 'T10085526@tsagroup.com.au' ? 'ezgrajewski@tsagroup.com.au' : agent === 'T10085531@tsagroup.com.au' ? 'hcrooks.tsagroup.com.au' : agent
+}
+                {/* {agent} */}
+                
               </option>
             ))}
           </select>
