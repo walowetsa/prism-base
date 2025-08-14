@@ -1,496 +1,515 @@
-// TODO: Replace OPENAI
-/* eslint-disable @typescript-eslint/no-unsafe-function-type */
 /* eslint-disable @typescript-eslint/no-explicit-any */
-import { NextRequest, NextResponse } from "next/server";
-import OpenAI from "openai";
+import { NextRequest, NextResponse } from 'next/server';
+import OpenAI from 'openai';
 
+// Types
+interface CallRecord {
+  id: string;
+  agent_username?: string;
+  queue_name?: string;
+  call_duration?: any;
+  disposition_title?: string;
+  sentiment_analysis?: any;
+  primary_category?: string;
+  initiation_timestamp?: string;
+  total_hold_time?: any;
+  [key: string]: any;
+}
+
+interface ProcessedMetrics {
+  totalCalls: number;
+  avgCallDuration: number;
+  avgHoldTime: number;
+  dispositionBreakdown: Record<string, { count: number; percentage: number }>;
+  sentimentBreakdown: Record<string, { count: number; percentage: number }>;
+  agentMetrics: Record<string, {
+    totalCalls: number;
+    avgDuration: number;
+    avgHoldTime: number;
+    topDispositions: string[];
+    sentimentScore: number;
+  }>;
+  queueMetrics: Record<string, {
+    totalCalls: number;
+    avgDuration: number;
+    avgWaitTime: number;
+    topDispositions: string[];
+  }>;
+  timePatterns: {
+    hourlyDistribution: Record<string, number>;
+    dailyTrends: Record<string, number>;
+  };
+  performanceIndicators: {
+    callsOver15Min: number;
+    callsUnder2Min: number;
+    abandonmentRate: number;
+    firstCallResolution: number;
+  };
+}
+
+// Initialize OpenAI
 const openai = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY,
 });
 
-// Rate limiting
-const rateLimitMap = new Map<string, { count: number; resetTime: number }>();
-// TODO: fix data type issues (15/07)
-const requestQueue = new Map<
-  string,
-  Array<{ resolve: Function; reject: Function; request: any }>
->();
-
-const estimateTokens = (text: string): number => {
-  return Math.ceil(text.length / 4); // Rough estimation: 1 token ≈ 4 characters
+// Rate limiting and retry configuration
+const RATE_LIMIT_CONFIG = {
+  maxRetries: 5,
+  baseDelay: 1000, // 1 second
+  maxDelay: 30000, // 30 seconds
+  backoffMultiplier: 2,
 };
 
-// Enhanced data preparation that always preserves full disposition counts
-// TODO: fix data type issues (15/07)
-const enhanceWithFullDispositions = (callData: any, fullRecords?: any[]): any => {
-  if (!fullRecords || fullRecords.length === 0) {
-    return callData;
+// Helper functions
+const extractNumericValue = (value: any): number => {
+  if (!value) return 0;
+  if (typeof value === 'number') return value;
+  if (typeof value === 'object' && value.minutes !== undefined && value.seconds !== undefined) {
+    return value.minutes * 60 + value.seconds;
   }
+  if (typeof value === 'string') {
+    const parsed = parseFloat(value);
+    return isNaN(parsed) ? 0 : parsed;
+  }
+  return 0;
+};
 
-  const fullDispositionCounts = fullRecords.reduce((acc, record) => {
-    const disp = record.disposition_title || "Unknown";
-    acc[disp] = (acc[disp] || 0) + 1;
-    return acc;
-  }, {} as Record<string, number>);
+const extractSentiment = (sentimentAnalysis: any): string => {
+  if (!sentimentAnalysis) return 'Unknown';
+  if (Array.isArray(sentimentAnalysis) && sentimentAnalysis.length > 0) {
+    return sentimentAnalysis[0].sentiment || 'Unknown';
+  }
+  if (typeof sentimentAnalysis === 'string') return sentimentAnalysis;
+  if (typeof sentimentAnalysis === 'object' && sentimentAnalysis.sentiment) {
+    return sentimentAnalysis.sentiment;
+  }
+  return 'Unknown';
+};
 
-  const totalCalls = fullRecords.length;
-  const dispositionBreakdown = Object.entries(fullDispositionCounts).map(([disposition, count]) => ({
-    disposition,
-    count: count as number,
-    percentage: (((count as number) / totalCalls) * 100).toFixed(1)
-  })).sort((a, b) => b.count - a.count);
+const sleep = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
 
-  const enhanced = { ...callData };
-  
-  if (enhanced.data) {
-    enhanced.data.fullDispositionCounts = fullDispositionCounts;
-    enhanced.data.dispositionBreakdown = dispositionBreakdown;
-    enhanced.data.totalCallsInDataset = totalCalls;
+// Comprehensive data preprocessing
+const preprocessCallData = (records: CallRecord[]): ProcessedMetrics => {
+  const totalCalls = records.length;
+  let totalDuration = 0;
+  let totalHoldTime = 0;
+  let callsOver15Min = 0;
+  let callsUnder2Min = 0;
+
+  const dispositions: Record<string, number> = {};
+  const sentiments: Record<string, number> = {};
+  const agentStats: Record<string, any> = {};
+  const queueStats: Record<string, any> = {};
+  const hourlyDistribution: Record<string, number> = {};
+  const dailyTrends: Record<string, number> = {};
+
+  records.forEach(record => {
+    // Basic metrics
+    const duration = extractNumericValue(record.call_duration);
+    const holdTime = extractNumericValue(record.total_hold_time);
     
-    if (callData.type === "disposition") {
-      enhanced.data.dispositions = fullDispositionCounts;
-    }
-  }
+    totalDuration += duration;
+    totalHoldTime += holdTime;
+    
+    if (duration > 900) callsOver15Min++; // 15 minutes
+    if (duration < 120) callsUnder2Min++; // 2 minutes
 
-  return enhanced;
-};
+    // Disposition tracking
+    const disposition = record.disposition_title || 'Unknown';
+    dispositions[disposition] = (dispositions[disposition] || 0) + 1;
 
-// Data sampling for large datasets
-// TODO: fix data type issues (15/07)
-const sampleData = (records: any[], maxSamples: number = 500): any[] => {
-  if (records.length <= maxSamples) return records;
+    // Sentiment tracking
+    const sentiment = extractSentiment(record.sentiment_analysis);
+    sentiments[sentiment] = (sentiments[sentiment] || 0) + 1;
 
-  const step = Math.floor(records.length / maxSamples);
-  const sampled = [];
-
-  for (let i = 0; i < records.length; i += step) {
-    if (sampled.length < maxSamples) {
-      sampled.push(records[i]);
-    }
-  }
-
-  return sampled;
-};
-
-// TODO: fix data type issues (15/07)
-const compressCallData = (callData: any, queryType: string): any => {
-  const { data } = callData;
-
-  switch (queryType) {
-    case "disposition":
-      return {
-        type: "disposition",
-        data: {
-          totalRecords: data.totalRecords,
-          dispositions: data.fullDispositionCounts || data.dispositions,
-          dispositionBreakdown: data.dispositionBreakdown,
-          dateRange: data.dateRange,
-          totalCallsInDataset: data.totalCallsInDataset,
-        },
+    // Agent metrics
+    const agent = record.agent_username || 'Unknown';
+    if (!agentStats[agent]) {
+      agentStats[agent] = {
+        totalCalls: 0,
+        totalDuration: 0,
+        totalHoldTime: 0,
+        dispositions: {},
+        sentiments: {},
       };
-
-    case "agent_performance":
-      // Compress agent data to key metrics only
-      // TODO: fix data type issues (15/07)
-      const compressedAgents: any = {};
-      Object.entries(data.agentMetrics || {}).forEach(
-        ([agent, metrics]: [string, any]) => {
-          compressedAgents[agent] = {
-            totalCalls: metrics.totalCalls,
-            avgDuration: metrics.totalDuration / metrics.totalCalls,
-            avgHoldTime: metrics.totalHoldTime / metrics.totalCalls,
-            topDisposition: Object.entries(metrics.dispositions).sort(
-              ([, a], [, b]) => (b as number) - (a as number)
-            )[0]?.[0],
-            successRate: calculateSuccessRate(metrics.dispositions),
-          };
-        }
-      );
-
-      return {
-        type: "agent_performance",
-        data: {
-          totalRecords: data.totalRecords,
-          agentMetrics: compressedAgents,
-          totalAgents: data.totalAgents,
-          fullDispositionCounts: data.fullDispositionCounts,
-          dispositionBreakdown: data.dispositionBreakdown,
-        },
-      };
-
-    case "summary":
-      return {
-        type: "summary",
-        data: {
-          overview: {
-            ...data.overview,
-            topDispositions: data.dispositionBreakdown?.slice(0, 5) || data.overview.topDispositions,
-          },
-          totalRecords: data.totalRecords,
-          dateRange: data.dateRange,
-          fullDispositionCounts: data.fullDispositionCounts,
-          dispositionBreakdown: data.dispositionBreakdown,
-        },
-      };
-
-    default:
-      const sampleRecords = sampleData(data.sampleRecords || [], 20);
-      return {
-        type: "general",
-        data: {
-          sampleRecords,
-          quickStats: data.quickStats,
-          totalRecords: data.totalRecords,
-          samplingNote: `Analysis based on ${sampleRecords.length} representative samples from ${data.totalRecords} total records`,
-          fullDispositionCounts: data.fullDispositionCounts,
-          dispositionBreakdown: data.dispositionBreakdown,
-        },
-      };
-  }
-};
-
-const calculateSuccessRate = (dispositions: Record<string, number>): number => {
-  const total = Object.values(dispositions).reduce(
-    (sum, count) => sum + count,
-    0
-  );
-  const successful = Object.entries(dispositions)
-    .filter(
-      ([disp]) =>
-        disp.toLowerCase().includes("resolved") ||
-        disp.toLowerCase().includes("completed") ||
-        disp.toLowerCase().includes("satisfied") ||
-        disp.toLowerCase().includes("successful") ||
-        disp.toLowerCase().includes("closed")
-    )
-    .reduce((sum, [, count]) => sum + count, 0);
-
-  return total > 0 ? (successful / total) * 100 : 0;
-};
-
-// Queuing functionality
-const processQueue = async (clientIP: string) => {
-  const queue = requestQueue.get(clientIP) || [];
-  if (queue.length === 0) return;
-
-  const { resolve, reject, request } = queue.shift()!;
-  requestQueue.set(clientIP, queue);
-
-  try {
-    const result = await processLargeRequest(request);
-    resolve(result);
-  } catch (error) {
-    reject(error);
-  }
-
-  // Process next in queue
-  if (queue.length > 0) {
-    setTimeout(() => processQueue(clientIP), 2000);
-  }
-};
-
-// TODO: fix data type issues (15/07)
-const processLargeRequest = async (requestData: any): Promise<any> => {
-  const { query, callData, queryType, fullRecords } = requestData;
-
-  const enhancedCallData = enhanceWithFullDispositions(callData, fullRecords);
-  
-  const compressedData = compressCallData(enhancedCallData, queryType);
-  const dataString = JSON.stringify(compressedData);
-  const estimatedTokens = estimateTokens(dataString);
-
-  // Use chunking strat
-  if (estimatedTokens > 8000) {
-    return await processWithChunking(query, enhancedCallData, queryType);
-  }
-
-  return await processSingleRequest(query, compressedData, queryType);
-};
-
-// TODO: fix data type issues (15/07)
-const processWithChunking = async (
-  query: string,
-  callData: any,
-  queryType: string
-) => {
-  const { data } = callData;
-  const chunkSize = 50; 
-  const chunks = [];
-
-  if (data.sampleRecords && data.sampleRecords.length > chunkSize) {
-    for (let i = 0; i < data.sampleRecords.length; i += chunkSize) {
-      chunks.push(data.sampleRecords.slice(i, i + chunkSize));
     }
-  } else {
-    chunks.push(data);
-  }
+    agentStats[agent].totalCalls++;
+    agentStats[agent].totalDuration += duration;
+    agentStats[agent].totalHoldTime += holdTime;
+    agentStats[agent].dispositions[disposition] = (agentStats[agent].dispositions[disposition] || 0) + 1;
+    agentStats[agent].sentiments[sentiment] = (agentStats[agent].sentiments[sentiment] || 0) + 1;
 
-  const chunkResults = [];
-
-  for (const chunk of chunks.slice(0, 3)) {
-    const chunkData = {
-      type: callData.type,
-      data: Array.isArray(chunk)
-        ? { 
-            sampleRecords: chunk, 
-            totalRecords: data.totalRecords,
-            fullDispositionCounts: data.fullDispositionCounts,
-            dispositionBreakdown: data.dispositionBreakdown,
-          }
-        : chunk,
-    };
-
-    try {
-      const result = await processSingleRequest(
-        `${query} (analysing subset of data)`,
-        chunkData,
-        queryType
-      );
-      chunkResults.push(result);
-    } catch (error) {
-      console.warn("Chunk processing failed:", error);
+    // Queue metrics
+    const queue = record.queue_name || 'Unknown';
+    if (!queueStats[queue]) {
+      queueStats[queue] = {
+        totalCalls: 0,
+        totalDuration: 0,
+        totalWaitTime: 0,
+        dispositions: {},
+      };
     }
-  }
+    queueStats[queue].totalCalls++;
+    queueStats[queue].totalDuration += duration;
+    queueStats[queue].totalWaitTime += holdTime;
+    queueStats[queue].dispositions[disposition] = (queueStats[queue].dispositions[disposition] || 0) + 1;
 
-  if (chunkResults.length === 0) {
-    throw new Error("Unable to process data chunks");
-  }
-
-  const combinedResult = chunkResults[0];
-  combinedResult.response += `\n\n*Note: Analysis based on representative data samples, but disposition counts reflect the complete dataset of ${data.totalRecords} records.*`;
-
-  return combinedResult;
-};
-
-// TODO: fix data type issues (15/07)
-const processSingleRequest = async (
-  query: string,
-  callData: any,
-  queryType: string
-) => {
-  const systemPrompt = generateSystemPrompt(queryType, {
-    type: callData.type,
-    recordCount: callData.data.totalRecords || 0,
-    queryType,
-    hasFullDispositions: !!callData.data.fullDispositionCounts,
+    // Time pattern analysis
+    if (record.initiation_timestamp) {
+      const date = new Date(record.initiation_timestamp);
+      const hour = date.getHours();
+      const day = date.toDateString();
+      
+      hourlyDistribution[hour] = (hourlyDistribution[hour] || 0) + 1;
+      dailyTrends[day] = (dailyTrends[day] || 0) + 1;
+    }
   });
 
-  const userPrompt = `Query: "${query}"
+  // Calculate percentages and derived metrics
+  const dispositionBreakdown: Record<string, { count: number; percentage: number }> = {};
+  Object.entries(dispositions).forEach(([key, count]) => {
+    dispositionBreakdown[key] = {
+      count,
+      percentage: (count / totalCalls) * 100
+    };
+  });
 
-Call Center Data (${callData.type} analysis):
-${JSON.stringify(callData.data, null, 2)}
+  const sentimentBreakdown: Record<string, { count: number; percentage: number }> = {};
+  Object.entries(sentiments).forEach(([key, count]) => {
+    sentimentBreakdown[key] = {
+      count,
+      percentage: (count / totalCalls) * 100
+    };
+  });
 
-Please provide a comprehensive analysis that directly addresses the query with specific insights, metrics, and actionable recommendations. 
+  // Process agent metrics
+  const agentMetrics: Record<string, any> = {};
+  Object.entries(agentStats).forEach(([agent, stats]) => {
+    const topDispositions = Object.entries(stats.dispositions)
+      .sort(([, a], [, b]) => (b as number) - (a as number))
+      .slice(0, 3)
+      .map(([disp]) => disp);
 
-${callData.data.fullDispositionCounts ? 'Note: Full disposition counts are available for the complete dataset.' : ''}`;
+    const positiveCount = stats.sentiments['Positive'] || 0;
+    const negativeCount = stats.sentiments['Negative'] || 0;
+    const sentimentScore = stats.totalCalls > 0 ? 
+      ((positiveCount - negativeCount) / stats.totalCalls) * 100 : 0;
 
-  const model =
-    queryType === "summary" || queryType === "agent_performance"
-      ? "gpt-5-thinking"
-      : "gpt-4o-mini";
-  const maxTokens = queryType === "summary" ? 3000 : 2000;
+    agentMetrics[agent] = {
+      totalCalls: stats.totalCalls,
+      avgDuration: stats.totalCalls > 0 ? stats.totalDuration / stats.totalCalls : 0,
+      avgHoldTime: stats.totalCalls > 0 ? stats.totalHoldTime / stats.totalCalls : 0,
+      topDispositions,
+      sentimentScore,
+    };
+  });
 
-  const completion = await openai.chat.completions.create({
-    model,
-    messages: [
-      { role: "system", content: systemPrompt },
-      { role: "user", content: userPrompt },
-    ],
-    max_tokens: maxTokens,
-    temperature: 0.1,
-    presence_penalty: 0.1,
-    frequency_penalty: 0.1,
+  // Process queue metrics
+  const queueMetrics: Record<string, any> = {};
+  Object.entries(queueStats).forEach(([queue, stats]) => {
+    const topDispositions = Object.entries(stats.dispositions)
+      .sort(([, a], [, b]) => (b as number) - (a as number))
+      .slice(0, 3)
+      .map(([disp]) => disp);
+
+    queueMetrics[queue] = {
+      totalCalls: stats.totalCalls,
+      avgDuration: stats.totalCalls > 0 ? stats.totalDuration / stats.totalCalls : 0,
+      avgWaitTime: stats.totalCalls > 0 ? stats.totalWaitTime / stats.totalCalls : 0,
+      topDispositions,
+    };
   });
 
   return {
-    response: completion.choices[0]?.message?.content,
-    metadata: {
-      queryType,
-      tokensUsed: completion.usage?.total_tokens,
-      model,
-      dataPoints: callData.data.totalRecords || 0,
-      hasFullDispositions: !!callData.data.fullDispositionCounts,
+    totalCalls,
+    avgCallDuration: totalCalls > 0 ? totalDuration / totalCalls : 0,
+    avgHoldTime: totalCalls > 0 ? totalHoldTime / totalCalls : 0,
+    dispositionBreakdown,
+    sentimentBreakdown,
+    agentMetrics,
+    queueMetrics,
+    timePatterns: {
+      hourlyDistribution,
+      dailyTrends,
+    },
+    performanceIndicators: {
+      callsOver15Min,
+      callsUnder2Min,
+      abandonmentRate: 0, // Would need specific logic based on disposition
+      firstCallResolution: 0, // Would need specific logic based on disposition
     },
   };
 };
 
-const checkRateLimit = (
-  identifier: string
-): { allowed: boolean; shouldQueue: boolean } => {
-  const now = Date.now();
-  const windowMs = 60 * 1000;
-  const maxRequests = 15;
-  const queueLimit = 5;
+// Smart data chunking based on query type
+const prepareContextForQuery = (
+  queryType: string,
+  metrics: ProcessedMetrics,
+  rawRecords: CallRecord[],
+  maxTokens: number = 100000
+): string => {
+  let context = '';
 
-  const current = rateLimitMap.get(identifier);
-  if (!current) {
-    rateLimitMap.set(identifier, { count: 1, resetTime: now + windowMs });
-    return { allowed: true, shouldQueue: false };
+  // Base statistics (always include)
+  context += `## Call Center Analytics Summary\n`;
+  context += `**Total Calls Analyzed:** ${metrics.totalCalls.toLocaleString()}\n`;
+  context += `**Average Call Duration:** ${Math.round(metrics.avgCallDuration / 60)} minutes ${Math.round(metrics.avgCallDuration % 60)} seconds\n`;
+  context += `**Average Hold Time:** ${Math.round(metrics.avgHoldTime / 60)} minutes ${Math.round(metrics.avgHoldTime % 60)} seconds\n\n`;
+
+  switch (queryType) {
+    case 'disposition':
+      context += `## Disposition Analysis\n`;
+      Object.entries(metrics.dispositionBreakdown)
+        .sort(([, a], [, b]) => (b as any).count - (a as any).count)
+        .forEach(([disposition, data]) => {
+          context += `**${disposition}:** ${data.count} calls (${data.percentage.toFixed(1)}%)\n`;
+        });
+      break;
+
+    case 'agent_performance':
+      context += `## Agent Performance Metrics\n`;
+      Object.entries(metrics.agentMetrics)
+        .sort(([, a], [, b]) => (b as any).totalCalls - (a as any).totalCalls)
+        .slice(0, 20) // Top 20 agents to stay within token limits
+        .forEach(([agent, data]) => {
+          context += `**${agent}:**\n`;
+          context += `- Calls: ${data.totalCalls}\n`;
+          context += `- Avg Duration: ${Math.round(data.avgDuration / 60)}m ${Math.round(data.avgDuration % 60)}s\n`;
+          context += `- Sentiment Score: ${data.sentimentScore.toFixed(1)}\n`;
+          context += `- Top Dispositions: ${data.topDispositions.join(', ')}\n\n`;
+        });
+      break;
+
+    case 'sentiment':
+      context += `## Sentiment Analysis\n`;
+      Object.entries(metrics.sentimentBreakdown)
+        .sort(([, a], [, b]) => (b as any).count - (a as any).count)
+        .forEach(([sentiment, data]) => {
+          context += `**${sentiment}:** ${data.count} calls (${data.percentage.toFixed(1)}%)\n`;
+        });
+      break;
+
+    case 'queue_analysis':
+      context += `## Queue Performance\n`;
+      Object.entries(metrics.queueMetrics)
+        .sort(([, a], [, b]) => (b as any).totalCalls - (a as any).totalCalls)
+        .forEach(([queue, data]) => {
+          context += `**${queue}:**\n`;
+          context += `- Calls: ${data.totalCalls}\n`;
+          context += `- Avg Duration: ${Math.round(data.avgDuration / 60)}m ${Math.round(data.avgDuration % 60)}s\n`;
+          context += `- Avg Wait: ${Math.round(data.avgWaitTime / 60)}m ${Math.round(data.avgWaitTime % 60)}s\n`;
+          context += `- Top Dispositions: ${data.topDispositions.join(', ')}\n\n`;
+        });
+      break;
+
+    case 'timing':
+      context += `## Time Pattern Analysis\n`;
+      context += `**Hourly Distribution (Top 10):**\n`;
+      Object.entries(metrics.timePatterns.hourlyDistribution)
+        .sort(([, a], [, b]) => (b as number) - (a as number))
+        .slice(0, 10)
+        .forEach(([hour, count]) => {
+          context += `- ${hour}:00: ${count} calls\n`;
+        });
+      break;
+
+    case 'summary':
+      // Include all key metrics for summary
+      context += `## Complete Overview\n\n`;
+      
+      context += `### Top Dispositions\n`;
+      Object.entries(metrics.dispositionBreakdown)
+        .sort(([, a], [, b]) => (b as any).count - (a as any).count)
+        .slice(0, 10)
+        .forEach(([disposition, data]) => {
+          context += `- ${disposition}: ${data.count} (${data.percentage.toFixed(1)}%)\n`;
+        });
+      
+      context += `\n### Performance Indicators\n`;
+      context += `- Calls over 15 minutes: ${metrics.performanceIndicators.callsOver15Min}\n`;
+      context += `- Calls under 2 minutes: ${metrics.performanceIndicators.callsUnder2Min}\n`;
+      
+      context += `\n### Top Performing Agents (by call volume)\n`;
+      Object.entries(metrics.agentMetrics)
+        .sort(([, a], [, b]) => (b as any).totalCalls - (a as any).totalCalls)
+        .slice(0, 5)
+        .forEach(([agent, data]) => {
+          context += `- ${agent}: ${data.totalCalls} calls, sentiment score: ${data.sentimentScore.toFixed(1)}\n`;
+        });
+      break;
+
+    default:
+      // General query - include sample records and key metrics
+      context += `## Key Metrics Overview\n`;
+      context += `**Top 5 Dispositions:**\n`;
+      Object.entries(metrics.dispositionBreakdown)
+        .sort(([, a], [, b]) => (b as any).count - (a as any).count)
+        .slice(0, 5)
+        .forEach(([disposition, data]) => {
+          context += `- ${disposition}: ${data.percentage.toFixed(1)}%\n`;
+        });
+      
+      // Add sample records for context
+      context += `\n**Sample Call Records:**\n`;
+      rawRecords.slice(0, 5).forEach((record, index) => {
+        context += `${index + 1}. Agent: ${record.agent_username || 'Unknown'}, `;
+        context += `Duration: ${Math.round(extractNumericValue(record.call_duration) / 60)}m, `;
+        context += `Disposition: ${record.disposition_title || 'Unknown'}\n`;
+      });
   }
 
-  if (now > current.resetTime) {
-    rateLimitMap.set(identifier, { count: 1, resetTime: now + windowMs });
-    return { allowed: true, shouldQueue: false };
+  // Truncate if too long (rough token estimation: 1 token ≈ 4 characters)
+  const estimatedTokens = context.length / 4;
+  if (estimatedTokens > maxTokens) {
+    const maxChars = maxTokens * 4;
+    context = context.substring(0, maxChars) + '\n\n[Data truncated due to size limits]';
   }
 
-  if (current.count >= maxRequests) {
-    const queue = requestQueue.get(identifier) || [];
-    if (queue.length < queueLimit) {
-      return { allowed: false, shouldQueue: true };
-    }
-    return { allowed: false, shouldQueue: false };
-  }
-
-  current.count++;
-  return { allowed: true, shouldQueue: false };
+  return context;
 };
 
-// TODO: fix data type issues (15/07)
-const generateSystemPrompt = (queryType: string, dataInfo: any): string => {
-  const basePrompt = `You are PRISM, an expert call center analytics AI assistant. You provide actionable insights with specific numbers and percentages.
-
-Always format your responses in an easily interpretable way - Not as markdown.
-
-IMPORTANT GUIDELINES:
-- Use specific metrics and percentages whenever possible
-- Provide actionable recommendations
-- Format responses clearly with headers and bullet points
-- Focus on business impact and operational improvements
-- Always cite specific numbers from the data
-- Use emojis sparingly but effectively for visual appeal
-- When working with sampled data, acknowledge the sampling and extrapolate insights appropriately
-- ${dataInfo.hasFullDispositions ? 'Full disposition counts are available for accurate analysis' : 'Work with available disposition data'}
-
-QUERY TYPE: ${queryType.toUpperCase()}
-DATASET SIZE: ${dataInfo.recordCount?.toLocaleString() || 'Unknown'} records
-
-${queryType === 'disposition' ? `
-DISPOSITION ANALYSIS FOCUS:
-- Provide exact counts and percentages for each disposition
-- Identify top 5 most common dispositions
-- Calculate success/resolution rates
-- Highlight any concerning disposition patterns
-- Suggest operational improvements based on disposition trends
-` : ''}
-
-${queryType === 'agent_performance' ? `
-AGENT PERFORMANCE FOCUS:
-- Compare agent metrics with team averages
-- Identify top and bottom performers
-- Analyze disposition patterns by agent
-- Suggest coaching opportunities
-- Include disposition success rates by agent
-` : ''}
-
-${queryType === 'summary' ? `
-SUMMARY ANALYSIS FOCUS:
-- Provide high-level overview with key metrics
-- Include disposition breakdown with percentages
-- Highlight major trends and patterns
-- Identify top 3 actionable insights
-- Use visual indicators (📊 📈 📉) for key metrics
-` : ''}`;
-
-  return basePrompt;
+// Rate-limited OpenAI API call with exponential backoff
+const callOpenAIWithRetry = async (
+  messages: any[],
+  model: string = 'gpt-4o-mini',
+  retryCount: number = 0
+): Promise<any> => {
+  try {
+    const response = await openai.chat.completions.create({
+      model,
+      messages,
+      max_tokens: 2000,
+      temperature: 0.7,
+    });
+    
+    return response;
+  } catch (error: any) {
+    if (error?.status === 429 && retryCount < RATE_LIMIT_CONFIG.maxRetries) {
+      const delay = Math.min(
+        RATE_LIMIT_CONFIG.baseDelay * Math.pow(RATE_LIMIT_CONFIG.backoffMultiplier, retryCount),
+        RATE_LIMIT_CONFIG.maxDelay
+      );
+      
+      console.log(`Rate limited. Retrying in ${delay}ms (attempt ${retryCount + 1}/${RATE_LIMIT_CONFIG.maxRetries})`);
+      await sleep(delay);
+      return callOpenAIWithRetry(messages, model, retryCount + 1);
+    }
+    
+    if (error?.status === 400 && error?.message?.includes('context_length_exceeded')) {
+      // Try with a smaller model or reduced context
+      if (model === 'gpt-4o') {
+        return callOpenAIWithRetry(messages, 'gpt-4o-mini', retryCount);
+      }
+      throw new Error('Query too complex for available models. Please try a more specific question.');
+    }
+    
+    throw error;
+  }
 };
 
 export async function POST(request: NextRequest) {
   try {
-    const { query, callData, queryType = "general", fullRecords } = await request.json();
+    const { query, callData, queryType, fullRecords } = await request.json();
 
-    if (!query || !callData) {
-      return NextResponse.json(
-        { error: "Query and call data are required" },
-        { status: 400 }
-      );
+    if (!query) {
+      return NextResponse.json({ error: 'Query is required' }, { status: 400 });
     }
 
-    const clientIP =
-      request.headers.get("x-forwarded-for") ||
-      request.headers.get("x-real-ip") ||
-      "unknown";
-
-    const rateCheck = checkRateLimit(clientIP);
-
-    if (!rateCheck.allowed) {
-      if (rateCheck.shouldQueue) {
-        return new Promise((resolve) => {
-          const queue = requestQueue.get(clientIP) || [];
-          queue.push({
-            // TODO: fix data type issues (15/07)
-            resolve: (result: any) => resolve(NextResponse.json(result)),
-            reject: () =>
-              resolve(
-                NextResponse.json(
-                  { error: "Request failed in queue", retryable: true },
-                  { status: 500 }
-                )
-              ),
-            request: { query, callData, queryType, fullRecords },
-          });
-          requestQueue.set(clientIP, queue);
-
-          if (queue.length === 1) {
-            setTimeout(() => processQueue(clientIP), 1000);
-          }
-        });
-      } else {
-        return NextResponse.json(
-          {
-            error:
-              "Rate limit exceeded and queue is full. Please wait before making another request.",
-            retryable: true,
-          },
-          { status: 429 }
-        );
-      }
+    if (!process.env.OPENAI_API_KEY) {
+      return NextResponse.json({ error: 'OpenAI API key not configured' }, { status: 500 });
     }
 
-    // Process the request with full records for disposition calculation
-    const result = await processLargeRequest({ query, callData, queryType, fullRecords });
+    // Use fullRecords if available for complete analysis, otherwise use callData
+    const recordsToAnalyze = fullRecords && fullRecords.length > 0 ? fullRecords : 
+                           (callData?.data?.sampleRecords || []);
 
-    console.log(
-      `✅ Query processed: ${queryType} | Tokens: ${result.metadata?.tokensUsed} | Model: ${result.metadata?.model} | Full Dispositions: ${result.metadata?.hasFullDispositions ? 'Yes' : 'No'}`
-    );
+    if (!recordsToAnalyze || recordsToAnalyze.length === 0) {
+      return NextResponse.json({ 
+        error: 'No call records available for analysis' 
+      }, { status: 400 });
+    }
 
-    return NextResponse.json(result);
-    // TODO: fix data type issues (15/07)
+    // Preprocess the data for efficient analysis
+    console.log(`Processing ${recordsToAnalyze.length} call records for query type: ${queryType}`);
+    const metrics = preprocessCallData(recordsToAnalyze);
+
+    // Prepare context based on query type
+    const context = prepareContextForQuery(queryType || 'general', metrics, recordsToAnalyze);
+
+    // Create the prompt
+    const systemPrompt = `You are PRISM AI, an expert call center analytics assistant. Analyze the provided call center data and answer questions with precise, actionable insights.
+
+Key Guidelines:
+- Provide specific numbers, percentages, and trends
+- Highlight actionable recommendations
+- Use professional language appropriate for call center management
+- When discussing performance, include both positive insights and improvement opportunities
+- Format responses with clear headers and bullet points for readability
+- If data seems incomplete, mention limitations but still provide valuable insights from available data
+
+Always structure your response with:
+1. Direct answer to the question
+2. Supporting data/statistics
+3. Key insights or patterns
+4. Actionable recommendations (when relevant)`;
+
+    const userPrompt = `Based on the following call center data, please answer this question: "${query}"
+
+${context}
+
+Please provide a comprehensive analysis with specific metrics and actionable insights.`;
+
+    const messages = [
+      { role: 'system', content: systemPrompt },
+      { role: 'user', content: userPrompt }
+    ];
+
+    // Call OpenAI with retry logic
+    const startTime = Date.now();
+    const response = await callOpenAIWithRetry(messages);
+    const processingTime = Date.now() - startTime;
+
+    const assistantResponse = response.choices[0]?.message?.content || 
+      'Unable to generate response. Please try rephrasing your question.';
+
+    // Calculate metadata
+    const metadata = {
+      model: response.model,
+      tokensUsed: response.usage?.total_tokens || 0,
+      dataPoints: recordsToAnalyze.length,
+      processingTime,
+      queryType,
+      hasFullDispositions: fullRecords && fullRecords.length > 0,
+      cacheKey: `${query}_${recordsToAnalyze.length}`,
+    };
+
+    return NextResponse.json({
+      response: assistantResponse,
+      metadata,
+    });
+
   } catch (error: any) {
-    console.error("❌ Error calling OpenAI:", error);
+    console.error('OpenAI API Error:', error);
 
-    // Enhanced error handling
+    let errorMessage = 'An unexpected error occurred while processing your request.';
+    let statusCode = 500;
+
     if (error?.status === 429) {
-      return NextResponse.json(
-        {
-          error:
-            "AI service is currently experiencing high demand. The request will be automatically retried.",
-          retryable: true,
-        },
-        { status: 429 }
-      );
+      errorMessage = 'Rate limit exceeded. Please wait a moment and try again.';
+      statusCode = 429;
+    } else if (error?.status === 400) {
+      errorMessage = error.message || 'Invalid request. Please try a different question.';
+      statusCode = 400;
+    } else if (error?.status === 401) {
+      errorMessage = 'Authentication failed. Please check API configuration.';
+      statusCode = 401;
+    } else if (error?.message) {
+      errorMessage = error.message;
     }
 
-    if (error?.code === "context_length_exceeded" || error?.status === 413) {
-      return NextResponse.json(
-        {
-          error:
-            "Dataset too large for analysis. Try filtering your data or asking a more specific question.",
-          retryable: false,
-          suggestion:
-            "Consider using filters to reduce your dataset size or ask about specific metrics.",
-        },
-        { status: 413 }
-      );
-    }
-
-    return NextResponse.json(
-      {
-        error: `Analysis failed: ${
-          error.message || "Unknown error"
-        }. Please try again or contact support if the problem persists.`,
-        retryable: true,
-      },
-      { status: 500 }
-    );
+    return NextResponse.json({ 
+      error: errorMessage,
+      details: process.env.NODE_ENV === 'development' ? error.stack : undefined
+    }, { status: statusCode });
   }
 }
