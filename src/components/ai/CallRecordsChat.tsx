@@ -653,7 +653,7 @@ const CallRecordsChat: React.FC<CallRecordsChatProps> = ({
                 </span>
               </span>
             )}
-            {dataComplexity && (
+            {/* {dataComplexity && (
               <span className="flex items-center gap-2">
                 <Database className="w-4 h-4" />
                 <span
@@ -670,7 +670,7 @@ const CallRecordsChat: React.FC<CallRecordsChatProps> = ({
                   {dataComplexity.complexity.toUpperCase()}
                 </span>
               </span>
-            )}
+            )} */}
           </div>
         </div>
         {retryCount > 0 && (
