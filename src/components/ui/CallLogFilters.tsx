@@ -35,10 +35,10 @@ const CallLogFilters: React.FC<CallLogFiltersProps> = ({
   onFilterChange,
   selectedAgent,
   onAgentChange,
-  agents,
-  selectedDispositions, // Updated prop name
-  onDispositionsChange, // Updated prop name
-  dispositions,
+  agents = [],
+  selectedDispositions = [], 
+  onDispositionsChange, 
+  dispositions = [],
   startDate,
   endDate,
   onStartDateChange,
@@ -136,7 +136,7 @@ const CallLogFilters: React.FC<CallLogFiltersProps> = ({
   };
 
   const getDispositionDisplayText = () => {
-    if (selectedDispositions.length === 0) {
+    if (selectedDispositions.length === 0 ) {
       return "All Dispositions";
     } else if (selectedDispositions.length === 1) {
       return selectedDispositions[0];
