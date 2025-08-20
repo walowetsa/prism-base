@@ -12,7 +12,6 @@ const Transcript: React.FC<TranscriptProps> = ({
   showTimestamps = true,
   showWordDetails = false 
 }) => {
-  // format timestamp (milliseconds to time)
   const formatTime = (milliseconds: number): string => {
     const seconds = Math.floor(milliseconds / 1000);
     const minutes = Math.floor(seconds / 60);

@@ -26,7 +26,7 @@ interface CallRecordsChatProps {
   filteredRecords: CallRecord[];
   totalRecords: number;
   loading: boolean;
-  allRecords?: CallRecord[]; // Add this to get access to full dataset for disposition counts
+  allRecords?: CallRecord[];
 }
 
 const MarkdownComponents = {
@@ -107,12 +107,12 @@ const calculateDataComplexity = (
   }
 };
 
-// client-side caching
+// ccaching
 const queryCache = new Map<
   string,
   { response: string; timestamp: number; metadata: any }
 >();
-const CACHE_DURATION = 5 * 60 * 1000; // 5 minutes
+const CACHE_DURATION = 5 * 60 * 1000;
 
 const getCachedResponse = (query: string, recordCount: number): any | null => {
   const cacheKey = `${query.toLowerCase().trim()}_${recordCount}`;
@@ -122,7 +122,6 @@ const getCachedResponse = (query: string, recordCount: number): any | null => {
     return cached;
   }
 
-  // Clean expired entries
   for (const [key, value] of queryCache.entries()) {
     if (Date.now() - value.timestamp > CACHE_DURATION) {
       queryCache.delete(key);
@@ -162,7 +161,7 @@ const classifyQuery = (
   // Query typing
   if (lowerQuery.includes("disposition") || lowerQuery.includes("outcome")) {
     type = "disposition";
-    priority = "high"; // Disposition queries are high priority since we have full data
+    priority = "high";
   } else if (
     lowerQuery.includes("sentiment") ||
     lowerQuery.includes("satisfaction")
@@ -193,7 +192,6 @@ const classifyQuery = (
     complexity = "complex";
   }
 
-  // Adjust complexity based on record count
   if (recordCount > 1000) {
     complexity = "complex";
   }
@@ -236,7 +234,7 @@ const prepareSmartDataEnhanced = (
         : null,
   };
 
-  // Helper functions
+  // Helper funcs
   const extractSentiment = (sentimentAnalysis: any): string => {
     if (!sentimentAnalysis) return "Unknown";
     if (Array.isArray(sentimentAnalysis) && sentimentAnalysis.length > 0) {
@@ -283,7 +281,6 @@ const prepareSmartDataEnhanced = (
         return acc;
       }, {} as Record<string, number>);
 
-      // Note: Full disposition counts will be calculated server-side from complete dataset
       return {
         type: "disposition",
         data: {
@@ -415,7 +412,7 @@ const prepareSmartDataEnhanced = (
 const CallRecordsChat: React.FC<CallRecordsChatProps> = ({
   filteredRecords,
   loading,
-  allRecords, // Use this for complete disposition calculations
+  allRecords,
 }) => {
   const [messages, setMessages] = useState<Message[]>([
     {
@@ -453,7 +450,6 @@ const CallRecordsChat: React.FC<CallRecordsChatProps> = ({
       const queryText = customQuery || inputValue.trim();
       if (!queryText || loading || isTyping) return;
 
-      // Check cache
       const cachedResponse = getCachedResponse(
         queryText,
         filteredRecords.length
@@ -507,8 +503,6 @@ const CallRecordsChat: React.FC<CallRecordsChatProps> = ({
             queryClassification.complexity
           );
 
-          // Prepare full records for disposition calculations
-          // Use allRecords if available, otherwise fall back to filteredRecords
           const recordsForDispositions = allRecords && allRecords.length > 0 ? allRecords : filteredRecords;
 
           const response = await fetch("/api/openai/query-calls", {
@@ -520,7 +514,7 @@ const CallRecordsChat: React.FC<CallRecordsChatProps> = ({
               query: queryText,
               callData: smartData,
               queryType: queryClassification.type,
-              fullRecords: recordsForDispositions, // Pass full records for accurate disposition counts
+              fullRecords: recordsForDispositions, 
             }),
           });
 
@@ -603,7 +597,6 @@ const CallRecordsChat: React.FC<CallRecordsChatProps> = ({
     });
   };
 
-  // Enhanced prompts that leverage full disposition data
   const getSmartPrompts = () => {
     const basePrompts = [
       "Show me complete disposition breakdown with percentages",
@@ -630,7 +623,6 @@ const CallRecordsChat: React.FC<CallRecordsChatProps> = ({
     ];
   };
 
-  // Calculate if we have full disposition access
   const hasFullDispositionData = allRecords && allRecords.length > filteredRecords.length;
 
   return (
@@ -653,24 +645,6 @@ const CallRecordsChat: React.FC<CallRecordsChatProps> = ({
                 </span>
               </span>
             )}
-            {/* {dataComplexity && (
-              <span className="flex items-center gap-2">
-                <Database className="w-4 h-4" />
-                <span
-                  className={`px-2 py-1 rounded text-xs ${
-                    dataComplexity.complexity === "low"
-                      ? "bg-green-800"
-                      : dataComplexity.complexity === "medium"
-                      ? "bg-yellow-800"
-                      : dataComplexity.complexity === "high"
-                      ? "bg-orange-800"
-                      : "bg-red-800"
-                  }`}
-                >
-                  {dataComplexity.complexity.toUpperCase()}
-                </span>
-              </span>
-            )} */}
           </div>
         </div>
         {retryCount > 0 && (
@@ -825,7 +799,6 @@ const CallRecordsChat: React.FC<CallRecordsChatProps> = ({
           </button>
         </div>
 
-        {/* Enhanced example prompts */}
         {filteredRecords.length > 0 && (
           <div className="mt-3">
             <div className="grid grid-cols-2 gap-2">

@@ -53,7 +53,6 @@ const CallLogTable: React.FC<CallLogTableProps> = ({ className }) => {
   const [startDate, setStartDate] = useState<string>("");
   const [endDate, setEndDate] = useState<string>("");
   
-  // Filter options loaded separately
   const [uniqueAgents, setUniqueAgents] = useState<string[]>([]);
   const [uniqueDispositions, setUniqueDispositions] = useState<string[]>([]);
   const [filtersLoading, setFiltersLoading] = useState(true);
@@ -61,7 +60,6 @@ const CallLogTable: React.FC<CallLogTableProps> = ({ className }) => {
   const dropdownRef = useRef<HTMLDivElement>(null);
   const recordsPerPage = 100;
 
-  // Debounced fetch to avoid excessive API calls
   const fetchCallRecords = useCallback(async (
     page: number = currentPage,
     resetPage: boolean = false
@@ -127,12 +125,10 @@ const CallLogTable: React.FC<CallLogTableProps> = ({ className }) => {
     sortState
   ]);
 
-  // Fetch filter options efficiently
   const fetchFilterOptions = useCallback(async () => {
     try {
       setFiltersLoading(true);
       
-      // Fetch agents and dispositions in parallel
       const [agentsResponse, dispositionsResponse] = await Promise.all([
         fetch('/api/supabase/call-logs', {
           method: 'POST',
@@ -163,13 +159,11 @@ const CallLogTable: React.FC<CallLogTableProps> = ({ className }) => {
     }
   }, []);
 
-  // Initial load
   useEffect(() => {
     fetchFilterOptions();
     fetchCallRecords(1, true);
   }, []);
 
-  // Refetch when filters change
   useEffect(() => {
     if (!filtersLoading) {
       fetchCallRecords(1, true);
@@ -185,7 +179,6 @@ const CallLogTable: React.FC<CallLogTableProps> = ({ className }) => {
     filtersLoading
   ]);
 
-  // Close dropdown
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
       if (
@@ -202,7 +195,6 @@ const CallLogTable: React.FC<CallLogTableProps> = ({ className }) => {
     };
   }, []);
 
-  // Set default date range when dateRange is selected
   useEffect(() => {
     if (filterPeriod === "dateRange" && !startDate && !endDate) {
       const today = new Date();

@@ -18,8 +18,8 @@ interface CallLogFiltersProps {
   selectedAgent: string;
   onAgentChange: (agent: string) => void;
   agents: string[];
-  selectedDispositions: string[]; // Changed from selectedDisposition
-  onDispositionsChange: (dispositions: string[]) => void; // Changed from onDispositionChange
+  selectedDispositions: string[];
+  onDispositionsChange: (dispositions: string[]) => void; 
   dispositions: string[];
   startDate: string;
   endDate: string;
@@ -36,8 +36,8 @@ const CallLogFilters: React.FC<CallLogFiltersProps> = ({
   selectedAgent,
   onAgentChange,
   agents = [],
-  selectedDispositions = [], 
-  onDispositionsChange, 
+  selectedDispositions = [],
+  onDispositionsChange,
   dispositions = [],
   startDate,
   endDate,
@@ -48,7 +48,8 @@ const CallLogFilters: React.FC<CallLogFiltersProps> = ({
   className,
 }) => {
   const [isRefreshing, setIsRefreshing] = useState(false);
-  const [isDispositionDropdownOpen, setIsDispositionDropdownOpen] = useState(false);
+  const [isDispositionDropdownOpen, setIsDispositionDropdownOpen] =
+    useState(false);
   const dispositionDropdownRef = useRef<HTMLDivElement>(null);
 
   const filterOptions = useMemo(
@@ -63,7 +64,6 @@ const CallLogFilters: React.FC<CallLogFiltersProps> = ({
     []
   );
 
-  // Close dropdown when clicking outside
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
       if (
@@ -112,7 +112,7 @@ const CallLogFilters: React.FC<CallLogFiltersProps> = ({
       setIsRefreshing(true);
       await onRefresh();
     } catch (error) {
-      console.error('Error refreshing data:', error);
+      console.error("Error refreshing data:", error);
     } finally {
       setIsRefreshing(false);
     }
@@ -129,14 +129,16 @@ const CallLogFilters: React.FC<CallLogFiltersProps> = ({
   const handleDispositionToggle = (disposition: string) => {
     const isSelected = selectedDispositions.includes(disposition);
     if (isSelected) {
-      onDispositionsChange(selectedDispositions.filter(d => d !== disposition));
+      onDispositionsChange(
+        selectedDispositions.filter((d) => d !== disposition)
+      );
     } else {
       onDispositionsChange([...selectedDispositions, disposition]);
     }
   };
 
   const getDispositionDisplayText = () => {
-    if (selectedDispositions.length === 0 ) {
+    if (selectedDispositions.length === 0) {
       return "All Dispositions";
     } else if (selectedDispositions.length === 1) {
       return selectedDispositions[0];
@@ -160,7 +162,7 @@ const CallLogFilters: React.FC<CallLogFiltersProps> = ({
           >
             <svg
               className={`w-4 h-4 group-hover:rotate-90 transition-all ${
-                isRefreshing ? 'animate-spin' : ''
+                isRefreshing ? "animate-spin" : ""
               }`}
               fill="none"
               stroke="currentColor"
@@ -193,16 +195,30 @@ const CallLogFilters: React.FC<CallLogFiltersProps> = ({
             <option value="">All Agents</option>
             {agents.map((agent) => (
               <option key={agent} value={agent}>
-                {                      agent === 'T10085496@tsagroup.com.au' ? 'mdunstan@tsagroup.com.au' : agent === 'T10085497@tsagroup.com.au' ? 'mwilson.tsagroup.com.au' : agent === 'T10085494@tsagroup.com.au' ? 'vride.tsagroup.com.au' : agent === 'T10085498@tsagroup.com.au' ? 'bskipper.tsagroup.com.au' : agent === 'T10085495@tsagroup.com.au' ? 'ksingh@tsagroup.com.au' : agent === 'T10085499@tsagroup.com.au' ? 'elima@tsagroup.com.au' : agent === 'T10085523@tsagroup.com.au' ? 'srana@tsagroup.com.au' : agent === 'T10085526@tsagroup.com.au' ? 'ezgrajewski@tsagroup.com.au' : agent === 'T10085531@tsagroup.com.au' ? 'hcrooks.tsagroup.com.au' : agent
-}
-                {/* {agent} */}
-                
+                {agent === "T10085496@tsagroup.com.au"
+                  ? "mdunstan@tsagroup.com.au"
+                  : agent === "T10085497@tsagroup.com.au"
+                  ? "mwilson.tsagroup.com.au"
+                  : agent === "T10085494@tsagroup.com.au"
+                  ? "vride.tsagroup.com.au"
+                  : agent === "T10085498@tsagroup.com.au"
+                  ? "bskipper.tsagroup.com.au"
+                  : agent === "T10085495@tsagroup.com.au"
+                  ? "ksingh@tsagroup.com.au"
+                  : agent === "T10085499@tsagroup.com.au"
+                  ? "elima@tsagroup.com.au"
+                  : agent === "T10085523@tsagroup.com.au"
+                  ? "srana@tsagroup.com.au"
+                  : agent === "T10085526@tsagroup.com.au"
+                  ? "ezgrajewski@tsagroup.com.au"
+                  : agent === "T10085531@tsagroup.com.au"
+                  ? "hcrooks.tsagroup.com.au"
+                  : agent}
               </option>
             ))}
           </select>
         </div>
 
-        {/* filter by disposition - multiselect */}
         <div className="flex items-center" ref={dispositionDropdownRef}>
           <label
             htmlFor="disposition-select"
@@ -213,19 +229,26 @@ const CallLogFilters: React.FC<CallLogFiltersProps> = ({
           <div className="relative">
             <button
               type="button"
-              onClick={() => setIsDispositionDropdownOpen(!isDispositionDropdownOpen)}
+              onClick={() =>
+                setIsDispositionDropdownOpen(!isDispositionDropdownOpen)
+              }
               className="px-3 py-1.5 text-sm border border-gray-300 rounded-full bg-neutral-200 text-gray-700 hover:border-gray-400 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 transition-colors duration-200 min-w-[200px] flex justify-between items-center"
             >
               <span className="truncate">{getDispositionDisplayText()}</span>
               <svg
                 className={`w-4 h-4 transition-transform ${
-                  isDispositionDropdownOpen ? 'rotate-180' : ''
+                  isDispositionDropdownOpen ? "rotate-180" : ""
                 }`}
                 fill="none"
                 stroke="currentColor"
                 viewBox="0 0 24 24"
               >
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M19 9l-7 7-7-7"
+                />
               </svg>
             </button>
 
@@ -243,7 +266,9 @@ const CallLogFilters: React.FC<CallLogFiltersProps> = ({
                         onChange={() => handleDispositionToggle(disposition)}
                         className="mr-2 h-4 w-4 text-emerald-600 focus:ring-emerald-500 border-gray-300 rounded"
                       />
-                      <span className="text-sm text-gray-700">{disposition}</span>
+                      <span className="text-sm text-gray-700">
+                        {disposition}
+                      </span>
                     </label>
                   ))}
                 </div>
@@ -262,52 +287,49 @@ const CallLogFilters: React.FC<CallLogFiltersProps> = ({
             )}
           </div>
 
-        <div className="flex items-center ml-12">
-          <button
-            onClick={handleResetAllFilters}
-            disabled={disabled}
-            className="px-3 py-1.5 text-sm font-medium rounded-md bg-emerald-800 text-white flex items-center gap-2 cursor-pointer"
-            title="Reset all filters"
-          >
-            <svg
-              className="w-4 h-4"
-              fill="none"
-              stroke="currentColor"
-              viewBox="0 0 24 24"
-              xmlns="http://www.w3.org/2000/svg"
+          <div className="flex items-center ml-12">
+            <button
+              onClick={handleResetAllFilters}
+              disabled={disabled}
+              className="px-3 py-1.5 text-sm font-medium rounded-md bg-emerald-800 text-white flex items-center gap-2 cursor-pointer"
+              title="Reset all filters"
             >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth={2}
-                d="M6 18L18 6M6 6l12 12"
-              />
-            </svg>
-            Reset Filters
-          </button>
-        </div>
+              <svg
+                className="w-4 h-4"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+                xmlns="http://www.w3.org/2000/svg"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M6 18L18 6M6 6l12 12"
+                />
+              </svg>
+              Reset Filters
+            </button>
+          </div>
         </div>
 
         <div className="ml-auto">
-          {
-            pathname === '/insights' ?
-          <Link href={"/"}>
-            <button className="px-3 py-1.5 text-sm border-none font-bold rounded-md bg-emerald-800 text-white min-w-[150px] cursor-pointer">
-              View Call Logs
-            </button>
-          </Link> :
-
-          <Link href={"/insights"}>
-            <button className="px-3 py-1.5 text-sm border-none font-bold rounded-md bg-emerald-800 text-white min-w-[150px] cursor-pointer">
-              View Insights
-            </button>
-          </Link>
-            
-          }
+          {pathname === "/insights" ? (
+            <Link href={"/"}>
+              <button className="px-3 py-1.5 text-sm border-none font-bold rounded-md bg-emerald-800 text-white min-w-[150px] cursor-pointer">
+                View Call Logs
+              </button>
+            </Link>
+          ) : (
+            <Link href={"/insights"}>
+              <button className="px-3 py-1.5 text-sm border-none font-bold rounded-md bg-emerald-800 text-white min-w-[150px] cursor-pointer">
+                View Insights
+              </button>
+            </Link>
+          )}
         </div>
       </div>
       <div className="flex flex-col">
-        {/* filter by time */}
         <div className="flex items-center space-x-1 p-1 rounded-full">
           {filterOptions.map((option, index) => (
             <button

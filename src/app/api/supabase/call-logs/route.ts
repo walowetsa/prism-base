@@ -10,23 +10,19 @@ export async function GET(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url)
     
-    // Pagination parameters
     const page = parseInt(searchParams.get('page') || '1')
     const limit = parseInt(searchParams.get('limit') || '100')
     const offset = (page - 1) * limit
 
-    // Filter parameters
     const filterPeriod = searchParams.get('filterPeriod') || 'today'
     const selectedAgent = searchParams.get('agent')
     const selectedDispositions = searchParams.get('dispositions')?.split(',').filter(Boolean) || []
     const startDate = searchParams.get('startDate')
     const endDate = searchParams.get('endDate')
     
-    // Sort parameters
     const sortField = searchParams.get('sortField') || 'initiation_timestamp'
     const sortDirection = searchParams.get('sortDirection') || 'desc'
 
-    // Build base query
     let query = supabase
       .from('call_records')
       .select(`
@@ -42,9 +38,8 @@ export async function GET(request: NextRequest) {
         call_summary, 
         call_duration, 
         primary_category
-      `, { count: 'exact' }) // Get total count for pagination
+      `, { count: 'exact' })
 
-    // Apply date filtering based on period
     if (filterPeriod !== 'all') {
       const now = new Date()
       const today = new Date(now.getFullYear(), now.getMonth(), now.getDate())
@@ -91,17 +86,14 @@ export async function GET(request: NextRequest) {
       }
     }
 
-    // Apply agent filter
     if (selectedAgent) {
       query = query.eq('agent_username', selectedAgent)
     }
 
-    // Apply disposition filter
     if (selectedDispositions.length > 0) {
       query = query.in('disposition_title', selectedDispositions)
     }
 
-    // Apply sorting
     const ascending = sortDirection === 'asc'
     switch (sortField) {
       case 'agent':
@@ -153,11 +145,10 @@ export async function GET(request: NextRequest) {
   }
 }
 
-// New endpoint to get filter options (agents, dispositions) efficiently
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json()
-    const { type } = body // 'agents' or 'dispositions'
+    const { type } = body 
 
     if (type === 'agents') {
       const { data, error } = await supabase
