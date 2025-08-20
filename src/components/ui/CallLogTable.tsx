@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useRef, useMemo } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 import CallRecord from "@/types/CallRecord";
 import CallLogFilters, { FilterPeriod } from "./CallLogFilters";
 import Link from "next/link";
@@ -17,182 +17,175 @@ interface SortState {
   direction: SortDirection;
 }
 
+interface PaginationData {
+  page: number;
+  limit: number;
+  total: number;
+  totalPages: number;
+  hasNext: boolean;
+  hasPrev: boolean;
+}
+
 const CallLogTable: React.FC<CallLogTableProps> = ({ className }) => {
   const [callRecords, setCallRecords] = useState<CallRecord[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [currentPage, setCurrentPage] = useState(1);
+  const [pagination, setPagination] = useState<PaginationData>({
+    page: 1,
+    limit: 100,
+    total: 0,
+    totalPages: 0,
+    hasNext: false,
+    hasPrev: false,
+  });
+  
   const [openDropdownId, setOpenDropdownId] = useState<string | null>(null);
   const [sortState, setSortState] = useState<SortState>({
     field: null,
     direction: "asc",
   });
+  
+  // Filter states
   const [filterPeriod, setFilterPeriod] = useState<FilterPeriod>("today");
   const [selectedAgent, setSelectedAgent] = useState<string>("");
-  const [selectedDispositions, setSelectedDispositions] = useState<string[]>(
-    []
-  );
+  const [selectedDispositions, setSelectedDispositions] = useState<string[]>([]);
   const [startDate, setStartDate] = useState<string>("");
   const [endDate, setEndDate] = useState<string>("");
-  const dropdownRef = useRef<HTMLDivElement>(null);
+  
+  // Filter options loaded separately
+  const [uniqueAgents, setUniqueAgents] = useState<string[]>([]);
+  const [uniqueDispositions, setUniqueDispositions] = useState<string[]>([]);
+  const [filtersLoading, setFiltersLoading] = useState(true);
 
+  const dropdownRef = useRef<HTMLDivElement>(null);
   const recordsPerPage = 100;
 
-  const uniqueAgents = useMemo(() => {
-    const agents = callRecords
-      .map((record) => record.agent_username)
-      .filter((agent, index, array) => agent && array.indexOf(agent) === index)
-      .sort();
-    return agents as string[];
-  }, [callRecords]);
+  // Debounced fetch to avoid excessive API calls
+  const fetchCallRecords = useCallback(async (
+    page: number = currentPage,
+    resetPage: boolean = false
+  ) => {
+    try {
+      setLoading(true);
+      setError(null);
 
-  const uniqueDispositions = useMemo(() => {
-    const dispositions = callRecords
-      .map((record) => record.disposition_title)
-      .filter(
-        (disposition, index, array) =>
-          disposition && array.indexOf(disposition) === index
-      )
-      .sort();
-    return dispositions as string[];
-  }, [callRecords]);
+      const actualPage = resetPage ? 1 : page;
+      
+      const params = new URLSearchParams({
+        page: actualPage.toString(),
+        limit: recordsPerPage.toString(),
+        filterPeriod,
+        ...(selectedAgent && { agent: selectedAgent }),
+        ...(selectedDispositions.length > 0 && { 
+          dispositions: selectedDispositions.join(',') 
+        }),
+        ...(startDate && { startDate }),
+        ...(endDate && { endDate }),
+        ...(sortState.field && { 
+          sortField: sortState.field,
+          sortDirection: sortState.direction 
+        }),
+      });
 
-  const filteredRecords = useMemo(() => {
-    let filtered = callRecords;
+      const response = await fetch(`/api/supabase/call-logs?${params}`);
 
-    if (selectedAgent) {
-      filtered = filtered.filter(
-        (record) => record.agent_username === selectedAgent
-      );
-    }
-
-    if (selectedDispositions.length > 0) {
-      filtered = filtered.filter(
-        (record) =>
-          record.disposition_title &&
-          selectedDispositions.includes(record.disposition_title)
-      );
-    }
-
-    if (filterPeriod === "all") return filtered;
-
-    const now = new Date();
-    const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-
-    return filtered.filter((record) => {
-      if (!record.initiation_timestamp) return false;
-
-      const recordDate = new Date(record.initiation_timestamp);
-      const recordDay = new Date(
-        recordDate.getFullYear(),
-        recordDate.getMonth(),
-        recordDate.getDate()
-      );
-
-      switch (filterPeriod) {
-        case "today":
-          return recordDay.getTime() === today.getTime();
-
-        case "yesterday":
-          const yesterday = new Date(today);
-          yesterday.setDate(yesterday.getDate() - 1);
-          return recordDay.getTime() === yesterday.getTime();
-
-        case "last7days":
-          const sevenDaysAgo = new Date(today);
-          sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
-          return recordDate >= sevenDaysAgo;
-
-        case "lastMonth":
-          const thirtyDaysAgo = new Date(today);
-          thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
-          return recordDate >= thirtyDaysAgo;
-
-        case "dateRange":
-          if (!startDate && !endDate) return true;
-
-          const start = startDate ? new Date(startDate) : null;
-          const end = endDate ? new Date(endDate) : null;
-
-          if (start) {
-            start.setHours(0, 0, 0, 0);
-          }
-          if (end) {
-            end.setHours(23, 59, 59, 999);
-          }
-
-          const recordDateTime = new Date(record.initiation_timestamp);
-
-          if (start && end) {
-            return recordDateTime >= start && recordDateTime <= end;
-          } else if (start) {
-            return recordDateTime >= start;
-          } else if (end) {
-            return recordDateTime <= end;
-          }
-
-          return true;
-
-        default:
-          return true;
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
       }
-    });
+
+      const result = await response.json();
+
+      if (result.error) {
+        throw new Error(result.error);
+      }
+
+      setCallRecords(result.data || []);
+      setPagination(result.pagination);
+      
+      if (resetPage) {
+        setCurrentPage(1);
+      } else {
+        setCurrentPage(actualPage);
+      }
+
+    } catch (err) {
+      console.error("Error fetching call records:", err);
+      setError(
+        err instanceof Error ? err.message : "Failed to fetch call records"
+      );
+    } finally {
+      setLoading(false);
+    }
   }, [
-    callRecords,
+    currentPage, 
+    filterPeriod, 
+    selectedAgent, 
+    selectedDispositions, 
+    startDate, 
+    endDate, 
+    sortState
+  ]);
+
+  // Fetch filter options efficiently
+  const fetchFilterOptions = useCallback(async () => {
+    try {
+      setFiltersLoading(true);
+      
+      // Fetch agents and dispositions in parallel
+      const [agentsResponse, dispositionsResponse] = await Promise.all([
+        fetch('/api/supabase/call-logs', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ type: 'agents' })
+        }),
+        fetch('/api/supabase/call-logs', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ type: 'dispositions' })
+        })
+      ]);
+
+      if (agentsResponse.ok) {
+        const agentsResult = await agentsResponse.json();
+        setUniqueAgents(agentsResult.data || []);
+      }
+
+      if (dispositionsResponse.ok) {
+        const dispositionsResult = await dispositionsResponse.json();
+        setUniqueDispositions(dispositionsResult.data || []);
+      }
+
+    } catch (error) {
+      console.error('Error fetching filter options:', error);
+    } finally {
+      setFiltersLoading(false);
+    }
+  }, []);
+
+  // Initial load
+  useEffect(() => {
+    fetchFilterOptions();
+    fetchCallRecords(1, true);
+  }, []);
+
+  // Refetch when filters change
+  useEffect(() => {
+    if (!filtersLoading) {
+      fetchCallRecords(1, true);
+    }
+  }, [
     filterPeriod,
     selectedAgent,
     selectedDispositions,
     startDate,
     endDate,
+    sortState,
+    fetchCallRecords,
+    filtersLoading
   ]);
 
-  const sortedRecords = useMemo(() => {
-    if (!sortState.field) return filteredRecords;
-
-    const sorted = [...filteredRecords].sort((a, b) => {
-      let aValue: string | number | Date;
-      let bValue: string | number | Date;
-
-      switch (sortState.field) {
-        case "agent":
-          aValue = (a.agent_username || "").toLowerCase();
-          bValue = (b.agent_username || "").toLowerCase();
-          break;
-        case "timestamp":
-          aValue = new Date(a.initiation_timestamp || 0);
-          bValue = new Date(b.initiation_timestamp || 0);
-          break;
-        case "disposition":
-          aValue = (a.disposition_title || "").toLowerCase();
-          bValue = (b.disposition_title || "").toLowerCase();
-          break;
-        default:
-          return 0;
-      }
-
-      if (aValue < bValue) {
-        return sortState.direction === "asc" ? -1 : 1;
-      }
-      if (aValue > bValue) {
-        return sortState.direction === "asc" ? 1 : -1;
-      }
-      return 0;
-    });
-
-    return sorted;
-  }, [filteredRecords, sortState]);
-
-  const totalPages = Math.ceil(sortedRecords.length / recordsPerPage);
-
-  const startIndex = (currentPage - 1) * recordsPerPage;
-  const endIndex = startIndex + recordsPerPage;
-  const currentRecords = sortedRecords.slice(startIndex, endIndex);
-
-  useEffect(() => {
-    fetchCallRecords();
-  }, []);
-
-  // close dropdown
+  // Close dropdown
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
       if (
@@ -209,6 +202,7 @@ const CallLogTable: React.FC<CallLogTableProps> = ({ className }) => {
     };
   }, []);
 
+  // Set default date range when dateRange is selected
   useEffect(() => {
     if (filterPeriod === "dateRange" && !startDate && !endDate) {
       const today = new Date();
@@ -219,34 +213,6 @@ const CallLogTable: React.FC<CallLogTableProps> = ({ className }) => {
       setEndDate(today.toISOString().split("T")[0]);
     }
   }, [filterPeriod, startDate, endDate]);
-
-  const fetchCallRecords = async () => {
-    try {
-      setLoading(true);
-      setError(null);
-
-      const response = await fetch("/api/supabase/call-logs");
-
-      if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
-      }
-
-      const result = await response.json();
-
-      if (result.error) {
-        throw new Error(result.error);
-      }
-
-      setCallRecords(result.data || []);
-    } catch (err) {
-      console.error("Error fetching call records:", err);
-      setError(
-        err instanceof Error ? err.message : "Failed to fetch call records"
-      );
-    } finally {
-      setLoading(false);
-    }
-  };
 
   const formatTimestamp = (timestamp: string | null): string => {
     if (!timestamp) return "N/A";
@@ -304,8 +270,8 @@ const CallLogTable: React.FC<CallLogTableProps> = ({ className }) => {
   };
 
   const handlePageChange = (page: number) => {
-    if (page >= 1 && page <= totalPages) {
-      setCurrentPage(page);
+    if (page >= 1 && page <= pagination.totalPages) {
+      fetchCallRecords(page);
       setOpenDropdownId(null);
     }
   };
@@ -314,13 +280,13 @@ const CallLogTable: React.FC<CallLogTableProps> = ({ className }) => {
     const pages = [];
     const maxVisiblePages = 5;
 
-    if (totalPages <= maxVisiblePages) {
-      for (let i = 1; i <= totalPages; i++) {
+    if (pagination.totalPages <= maxVisiblePages) {
+      for (let i = 1; i <= pagination.totalPages; i++) {
         pages.push(i);
       }
     } else {
       const start = Math.max(1, currentPage - 2);
-      const end = Math.min(totalPages, start + maxVisiblePages - 1);
+      const end = Math.min(pagination.totalPages, start + maxVisiblePages - 1);
 
       for (let i = start; i <= end; i++) {
         pages.push(i);
@@ -340,7 +306,6 @@ const CallLogTable: React.FC<CallLogTableProps> = ({ className }) => {
   };
 
   const handleDownloadAudio = (record: CallRecord) => {
-    // TODO: Implement api path + implementation for download from recording_url (sftp)
     console.log("Download audio for record:", record);
     setOpenDropdownId(null);
   };
@@ -361,13 +326,10 @@ const CallLogTable: React.FC<CallLogTableProps> = ({ className }) => {
         };
       }
     });
-
-    setCurrentPage(1);
   };
 
   const handleFilterChange = (filter: FilterPeriod) => {
     setFilterPeriod(filter);
-    setCurrentPage(1);
 
     if (filter !== "dateRange") {
       setStartDate("");
@@ -377,22 +339,23 @@ const CallLogTable: React.FC<CallLogTableProps> = ({ className }) => {
 
   const handleAgentChange = (agent: string) => {
     setSelectedAgent(agent);
-    setCurrentPage(1);
   };
 
   const handleDispositionsChange = (dispositions: string[]) => {
     setSelectedDispositions(dispositions);
-    setCurrentPage(1);
   };
 
   const handleStartDateChange = (date: string) => {
     setStartDate(date);
-    setCurrentPage(1);
   };
 
   const handleEndDateChange = (date: string) => {
     setEndDate(date);
-    setCurrentPage(1);
+  };
+
+  const handleRefresh = async () => {
+    await fetchFilterOptions();
+    await fetchCallRecords(currentPage);
   };
 
   const getSortIcon = (field: SortField) => {
@@ -424,7 +387,7 @@ const CallLogTable: React.FC<CallLogTableProps> = ({ className }) => {
     return `${baseClass} ${activeClass}`;
   };
 
-  if (loading) {
+  if (loading && callRecords.length === 0) {
     return (
       <div className={`flex items-center justify-center p-8 ${className}`}>
         <div className="text-gray-600">Loading call records...</div>
@@ -440,20 +403,12 @@ const CallLogTable: React.FC<CallLogTableProps> = ({ className }) => {
             <strong>Error:</strong> {error}
           </div>
           <button
-            onClick={fetchCallRecords}
+            onClick={handleRefresh}
             className="mt-2 px-4 py-2 bg-red-600 text-white rounded hover:bg-red-700 transition-colors"
           >
             Retry
           </button>
         </div>
-      </div>
-    );
-  }
-
-  if (callRecords.length === 0) {
-    return (
-      <div className={`flex items-center justify-center p-8 ${className}`}>
-        <div className="text-gray-600">No call records found.</div>
       </div>
     );
   }
@@ -477,9 +432,16 @@ const CallLogTable: React.FC<CallLogTableProps> = ({ className }) => {
             endDate={endDate}
             onStartDateChange={handleStartDateChange}
             onEndDateChange={handleEndDateChange}
-            onRefresh={fetchCallRecords}
-            disabled={loading}
+            onRefresh={handleRefresh}
+            disabled={loading || filtersLoading}
           />
+        </div>
+        <div className="text-sm text-gray-600">
+          {loading ? (
+            "Loading..."
+          ) : (
+            `${pagination.total} total records`
+          )}
         </div>
       </div>
 
@@ -537,7 +499,14 @@ const CallLogTable: React.FC<CallLogTableProps> = ({ className }) => {
               </tr>
             </thead>
             <tbody className="bg-black divide-y divide-neutral-800">
-              {currentRecords.map((record) => (
+              {loading && callRecords.length > 0 && (
+                <tr>
+                  <td colSpan={7} className="px-4 py-2 text-center text-gray-400">
+                    <div className="animate-pulse">Updating...</div>
+                  </td>
+                </tr>
+              )}
+              {callRecords.map((record) => (
                 <tr
                   key={record.contact_id}
                   className="hover:bg-neutral-600 transition-colors"
@@ -546,7 +515,6 @@ const CallLogTable: React.FC<CallLogTableProps> = ({ className }) => {
                     {
                       record.agent_username === 'T10085496@tsagroup.com.au' ? 'mdunstan@tsagroup.com.au' : record.agent_username === 'T10085497@tsagroup.com.au' ? 'mwilson.tsagroup.com.au' : record.agent_username === 'T10085494@tsagroup.com.au' ? 'vride.tsagroup.com.au' : record.agent_username === 'T10085498@tsagroup.com.au' ? 'bskipper.tsagroup.com.au' : record.agent_username === 'T10085495@tsagroup.com.au' ? 'ksingh@tsagroup.com.au' : record.agent_username === 'T10085499@tsagroup.com.au' ? 'elima@tsagroup.com.au' : record.agent_username === 'T10085523@tsagroup.com.au' ? 'srana@tsagroup.com.au' : record.agent_username === 'T10085526@tsagroup.com.au' ? 'ezgrajewski@tsagroup.com.au' : record.agent_username === 'T10085531@tsagroup.com.au' ? 'hcrooks.tsagroup.com.au' : record.agent_username
                     }
-                    {/* {record.agent_username || "N/A"} */}
                   </td>
                   <td className="px-4 py-3 text-sm text-white w-64">
                     {formatTimestamp(record.initiation_timestamp)}
@@ -577,7 +545,7 @@ const CallLogTable: React.FC<CallLogTableProps> = ({ className }) => {
                   </td>
                   <td className="px-4 py-3 text-sm text-white w-20 relative">
                     <div
-                      ref={openDropdownId === record.id ? dropdownRef : null}
+                      ref={openDropdownId === record.contact_id ? dropdownRef : null}
                     >
                       <button
                         onClick={() => handleEllipsisClick(record.contact_id)}
@@ -617,14 +585,14 @@ const CallLogTable: React.FC<CallLogTableProps> = ({ className }) => {
       </div>
 
       {/* pagination */}
-      {totalPages > 1 && (
+      {pagination.totalPages > 1 && (
         <div className="mt-6 flex items-center justify-between">
           <div className="flex items-center space-x-2">
             <button
               onClick={() => handlePageChange(currentPage - 1)}
-              disabled={currentPage === 1}
+              disabled={!pagination.hasPrev || loading}
               className={`px-3 py-2 text-sm font-medium rounded-md ${
-                currentPage === 1
+                !pagination.hasPrev || loading
                   ? "bg-neutral-200 text-gray-400 cursor-not-allowed"
                   : "bg-neutral-200 text-gray-700 border border-gray-300 hover:bg-gray-50"
               }`}
@@ -637,9 +605,12 @@ const CallLogTable: React.FC<CallLogTableProps> = ({ className }) => {
                 <button
                   key={page}
                   onClick={() => handlePageChange(page)}
+                  disabled={loading}
                   className={`px-3 py-2 text-sm font-medium rounded-md ${
                     currentPage === page
                       ? "bg-emerald-800 text-white"
+                      : loading
+                      ? "bg-neutral-200 text-gray-400 cursor-not-allowed"
                       : "bg-neutral-200 text-gray-700 border border-gray-300 hover:bg-gray-50"
                   }`}
                 >
@@ -650,9 +621,9 @@ const CallLogTable: React.FC<CallLogTableProps> = ({ className }) => {
 
             <button
               onClick={() => handlePageChange(currentPage + 1)}
-              disabled={currentPage === totalPages}
+              disabled={!pagination.hasNext || loading}
               className={`px-3 py-2 text-sm font-medium rounded-md ${
-                currentPage === totalPages
+                !pagination.hasNext || loading
                   ? "bg-neutral-200 text-gray-400 cursor-not-allowed"
                   : "bg-neutral-200 text-gray-700 border border-gray-300 hover:bg-gray-50"
               }`}
@@ -662,7 +633,7 @@ const CallLogTable: React.FC<CallLogTableProps> = ({ className }) => {
           </div>
 
           <div className="text-sm text-gray-600">
-            Total: {sortedRecords.length} records
+            Page {currentPage} of {pagination.totalPages} • Total: {pagination.total} records
           </div>
         </div>
       )}

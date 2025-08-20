@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect, useCallback } from "react";
 import CallRecord from "@/types/CallRecord";
 import CallLogFilters, {
   FilterPeriod,
@@ -10,116 +10,124 @@ import CallRecordsChat from "../../components/ai/CallRecordsChat";
 
 const InsightsPage = () => {
   const [callRecords, setCallRecords] = useState<CallRecord[]>([]);
+  const [allRecordsCount, setAllRecordsCount] = useState(0);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  
+  // Filter states
   const [filterPeriod, setFilterPeriod] = useState<FilterPeriod>("today");
   const [selectedAgent, setSelectedAgent] = useState<string>("");
-  const [selectedDisposition, setSelectedDisposition] = useState<string>("");
+  const [selectedDispositions, setSelectedDispositions] = useState<string[]>([]);
   const [startDate, setStartDate] = useState<string>("");
   const [endDate, setEndDate] = useState<string>("");
+  
+  // Filter options loaded separately
+  const [uniqueAgents, setUniqueAgents] = useState<string[]>([]);
+  const [uniqueDispositions, setUniqueDispositions] = useState<string[]>([]);
+  const [filtersLoading, setFiltersLoading] = useState(true);
 
-  // get agents
-  const uniqueAgents = useMemo(() => {
-    const agents = callRecords
-      .map((record) => record.agent_username)
-      .filter((agent, index, array) => agent && array.indexOf(agent) === index)
-      .sort();
-    return agents as string[];
-  }, [callRecords]);
+  // Fetch filtered records for insights - we'll get more records for better insights
+  const fetchCallRecords = useCallback(async () => {
+    try {
+      setLoading(true);
+      setError(null);
 
-  // get dispositions
-  const uniqueDispositions = useMemo(() => {
-    const dispositions = callRecords
-      .map((record) => record.disposition_title)
-      .filter((disposition, index, array) => disposition && array.indexOf(disposition) === index)
-      .sort();
-    return dispositions as string[];
-  }, [callRecords]);
+      // For insights, we want to fetch more records to get better statistics
+      // We'll use a higher limit but still benefit from server-side filtering
+      const params = new URLSearchParams({
+        page: '1',
+        limit: '1000', // Get more records for insights analysis
+        filterPeriod,
+        ...(selectedAgent && { agent: selectedAgent }),
+        ...(selectedDispositions.length > 0 && { 
+          dispositions: selectedDispositions.join(',') 
+        }),
+        ...(startDate && { startDate }),
+        ...(endDate && { endDate }),
+        sortField: 'initiation_timestamp',
+        sortDirection: 'desc'
+      });
 
-  const filteredRecords = useMemo(() => {
-    let filtered = callRecords;
+      const response = await fetch(`/api/supabase/call-logs?${params}`);
 
-    if (selectedAgent) {
-      filtered = filtered.filter(
-        (record) => record.agent_username === selectedAgent
-      );
-    }
-
-    if (selectedDisposition) {
-      filtered = filtered.filter(
-        (record) => record.disposition_title === selectedDisposition
-      );
-    }
-
-    if (filterPeriod === "all") return filtered;
-
-    const now = new Date();
-    const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-
-    return filtered.filter((record) => {
-      if (!record.initiation_timestamp) return false;
-
-      const recordDate = new Date(record.initiation_timestamp);
-      const recordDay = new Date(
-        recordDate.getFullYear(),
-        recordDate.getMonth(),
-        recordDate.getDate()
-      );
-
-      switch (filterPeriod) {
-        case "today":
-          return recordDay.getTime() === today.getTime();
-
-        case "yesterday":
-          const yesterday = new Date(today);
-          yesterday.setDate(yesterday.getDate() - 1);
-          return recordDay.getTime() === yesterday.getTime();
-
-        case "last7days":
-          const sevenDaysAgo = new Date(today);
-          sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
-          return recordDate >= sevenDaysAgo;
-
-        case "lastMonth":
-          const thirtyDaysAgo = new Date(today);
-          thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
-          return recordDate >= thirtyDaysAgo;
-
-        case "dateRange":
-          if (!startDate && !endDate) return true;
-          
-          const start = startDate ? new Date(startDate) : null;
-          const end = endDate ? new Date(endDate) : null;
-          
-          // Set time to start and end of day for proper comparison
-          if (start) {
-            start.setHours(0, 0, 0, 0);
-          }
-          if (end) {
-            end.setHours(23, 59, 59, 999);
-          }
-          
-          const recordDateTime = new Date(record.initiation_timestamp);
-          
-          if (start && end) {
-            return recordDateTime >= start && recordDateTime <= end;
-          } else if (start) {
-            return recordDateTime >= start;
-          } else if (end) {
-            return recordDateTime <= end;
-          }
-          
-          return true;
-
-        default:
-          return true;
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
       }
-    });
-  }, [callRecords, filterPeriod, selectedAgent, selectedDisposition, startDate, endDate]);
 
-  useEffect(() => {
-    fetchCallRecords();
+      const result = await response.json();
+
+      if (result.error) {
+        throw new Error(result.error);
+      }
+
+      setCallRecords(result.data || []);
+      setAllRecordsCount(result.pagination.total || 0);
+
+    } catch (err) {
+      console.error("Error fetching call records:", err);
+      setError(
+        err instanceof Error ? err.message : "Failed to fetch call records"
+      );
+    } finally {
+      setLoading(false);
+    }
+  }, [filterPeriod, selectedAgent, selectedDispositions, startDate, endDate]);
+
+  // Fetch filter options efficiently
+  const fetchFilterOptions = useCallback(async () => {
+    try {
+      setFiltersLoading(true);
+      
+      // Fetch agents and dispositions in parallel
+      const [agentsResponse, dispositionsResponse] = await Promise.all([
+        fetch('/api/supabase/call-logs', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ type: 'agents' })
+        }),
+        fetch('/api/supabase/call-logs', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ type: 'dispositions' })
+        })
+      ]);
+
+      if (agentsResponse.ok) {
+        const agentsResult = await agentsResponse.json();
+        setUniqueAgents(agentsResult.data || []);
+      }
+
+      if (dispositionsResponse.ok) {
+        const dispositionsResult = await dispositionsResponse.json();
+        setUniqueDispositions(dispositionsResult.data || []);
+      }
+
+    } catch (error) {
+      console.error('Error fetching filter options:', error);
+    } finally {
+      setFiltersLoading(false);
+    }
   }, []);
+
+  // Initial load
+  useEffect(() => {
+    fetchFilterOptions();
+  }, [fetchFilterOptions]);
+
+  // Fetch records when filters change
+  useEffect(() => {
+    if (!filtersLoading) {
+      fetchCallRecords();
+    }
+  }, [
+    filterPeriod,
+    selectedAgent,
+    selectedDispositions,
+    startDate,
+    endDate,
+    fetchCallRecords,
+    filtersLoading
+  ]);
 
   // Initialize default dates when dateRange is selected
   useEffect(() => {
@@ -133,35 +141,6 @@ const InsightsPage = () => {
     }
   }, [filterPeriod, startDate, endDate]);
 
-  const fetchCallRecords = async () => {
-    try {
-      setLoading(true);
-      setError(null);
-
-      const response = await fetch("/api/supabase/call-logs");
-
-      if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
-      }
-
-      const result = await response.json();
-
-      if (result.error) {
-        throw new Error(result.error);
-      }
-
-      setCallRecords(result.data || []);
-    } catch (err) {
-      console.error("Error fetching call records:", err);
-      setError(
-        err instanceof Error ? err.message : "Failed to fetch call records"
-      );
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  
   const handleFilterChange = (filter: FilterPeriod) => {
     setFilterPeriod(filter);
     
@@ -175,8 +154,8 @@ const InsightsPage = () => {
     setSelectedAgent(agent);
   };
 
-  const handleDispositionChange = (disposition: string) => {
-    setSelectedDisposition(disposition);
+  const handleDispositionsChange = (dispositions: string[]) => {
+    setSelectedDispositions(dispositions);
   };
 
   const handleStartDateChange = (date: string) => {
@@ -186,7 +165,11 @@ const InsightsPage = () => {
   const handleEndDateChange = (date: string) => {
     setEndDate(date);
   };
-  
+
+  const handleRefresh = async () => {
+    await fetchFilterOptions();
+    await fetchCallRecords();
+  };
 
   if (error) {
     return (
@@ -196,7 +179,7 @@ const InsightsPage = () => {
             <strong>Error:</strong> {error}
           </div>
           <button
-            onClick={fetchCallRecords}
+            onClick={handleRefresh}
             className="mt-2 px-4 py-2 bg-red-600 text-white rounded hover:bg-red-700 transition-colors"
           >
             Retry
@@ -209,17 +192,6 @@ const InsightsPage = () => {
   return (
     <div className="flex-1 flex flex-col p-4 ">
       <div className="mb-4 flex flex-col gap-4">
-        {/* <div className="flex justify-between items-center">
-          <div className="text-sm text-gray-600 flex items-center gap-x-4">
-            <RefreshButton onRefresh={fetchCallRecords} disabled={loading} />
-            {!loading && (
-              <>
-                Analysing {filteredRecords.length} of {callRecords.length} records
-              </>
-            )}
-          </div>
-        </div> */}
-
         <div className="flex justify-center">
           <CallLogFilters
             selectedFilter={filterPeriod}
@@ -227,31 +199,50 @@ const InsightsPage = () => {
             selectedAgent={selectedAgent}
             onAgentChange={handleAgentChange}
             agents={uniqueAgents}
-            selectedDisposition={selectedDisposition}
-            onDispositionChange={handleDispositionChange}
+            selectedDispositions={selectedDispositions}
+            onDispositionsChange={handleDispositionsChange}
             dispositions={uniqueDispositions}
             startDate={startDate}
             endDate={endDate}
             onStartDateChange={handleStartDateChange}
             onEndDateChange={handleEndDateChange}
-            onRefresh={fetchCallRecords}
-            disabled={loading}
+            onRefresh={handleRefresh}
+            disabled={loading || filtersLoading}
           />
+        </div>
+        
+        {/* Status indicator */}
+        <div className="flex justify-center">
+          <div className="text-sm text-gray-600 flex items-center gap-x-4">
+            {loading && (
+              <span className="animate-pulse">Loading insights...</span>
+            )}
+            {!loading && (
+              <>
+                Analyzing {callRecords.length} of {allRecordsCount} total records
+                {callRecords.length === 1000 && allRecordsCount > 1000 && (
+                  <span className="text-amber-600 text-xs">
+                    (Showing first 1000 records for analysis)
+                  </span>
+                )}
+              </>
+            )}
+          </div>
         </div>
       </div>
       
       <div className="flex gap-x-4 max-h-[calc(100vh-160px)]">
         <div className="flex-1 max-h-[calc(100vh-160px)]">
           <InsightsStatsDashboard
-            filteredRecords={filteredRecords}
-            totalRecords={callRecords.length}
+            filteredRecords={callRecords}
+            totalRecords={allRecordsCount}
             loading={loading}
           />
         </div>
         <div className="w-[30vw] min-w-[360px] max-w-[640px] max-h-[calc(100vh-220px)]">
           <CallRecordsChat
-            filteredRecords={filteredRecords}
-            totalRecords={callRecords.length}
+            filteredRecords={callRecords}
+            totalRecords={allRecordsCount}
             loading={loading}
           />
         </div>
