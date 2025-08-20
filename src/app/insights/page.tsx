@@ -36,7 +36,7 @@ const InsightsPage = () => {
       // We'll use a higher limit but still benefit from server-side filtering
       const params = new URLSearchParams({
         page: '1',
-        limit: '1000', // Get more records for insights analysis
+        limit: '99999', // Get more records for insights analysis
         filterPeriod,
         ...(selectedAgent && { agent: selectedAgent }),
         ...(selectedDispositions.length > 0 && { 
