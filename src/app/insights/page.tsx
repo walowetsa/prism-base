@@ -217,16 +217,6 @@ const InsightsPage = () => {
             {loading && (
               <span className="animate-pulse">Loading insights...</span>
             )}
-            {!loading && (
-              <>
-                Analyzing {callRecords.length} of {allRecordsCount} total records
-                {callRecords.length === 1000 && allRecordsCount > 1000 && (
-                  <span className="text-amber-600 text-xs">
-                    (Showing first 1000 records for analysis)
-                  </span>
-                )}
-              </>
-            )}
           </div>
         </div>
       </div>
