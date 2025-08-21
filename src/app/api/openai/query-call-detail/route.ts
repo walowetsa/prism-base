@@ -19,7 +19,6 @@ export async function POST(request: NextRequest) {
 
     const { callRecord, transcript, callInfo } = callData;
 
-    // Prompt for single calls
     const systemPrompt = `You are an AI assistant specialized in analysing individual call center interactions and providing detailed insights.
 
 Call Context:
@@ -69,12 +68,12 @@ ${callDataString}
 Provide a comprehensive analysis focusing on this individual call with specific insights and actionable recommendations.`;
 
     const completion = await openai.chat.completions.create({
-      model: 'gpt-4o',
+      model: 'gpt-4.1-mini',
       messages: [
         { role: 'system', content: systemPrompt },
         { role: 'user', content: userPrompt }
       ],
-      max_tokens: 100000,
+      max_tokens: 4000,
       temperature: 0.3,
     });
 
