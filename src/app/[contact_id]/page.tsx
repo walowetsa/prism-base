@@ -570,19 +570,18 @@ const calculateSentimentStats = (sentimentData: SentimentData[]) => {
                 )}
 
               {/* Entities */}
-              {callRecord.entities && callRecord.entities.length > 0 && (
+              {/* {callRecord.entities && callRecord.entities.length > 0 && (
                 <div className="bg-black rounded-lg shadow-sm p-6">
                   <h3 className="text-lg font-semibold text-emerald-800 mb-3">
                     Extracted Entities
                   </h3>
                   <div className="space-y-2">
-                    {/* TODO: Add entity breakdown */}
                     <p className="text-neutral-200 text-sm">
                       Entity data available - implementation pending
                     </p>
                   </div>
                 </div>
-              )}
+              )} */}
             </div>
 
             {/* Middle Column - Transcript */}
