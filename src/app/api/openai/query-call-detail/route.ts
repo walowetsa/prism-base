@@ -74,7 +74,7 @@ Provide a comprehensive analysis focusing on this individual call with specific 
         { role: 'system', content: systemPrompt },
         { role: 'user', content: userPrompt }
       ],
-      max_tokens: 4000,
+      max_tokens: 100000,
       temperature: 0.3,
     });
 
