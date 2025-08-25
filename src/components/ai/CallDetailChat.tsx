@@ -58,7 +58,7 @@ const MarkdownComponents = {
     </code>
   ),
   blockquote: ({ children }: any) => (
-    <blockquote className="border-l-4 border-emerald-800 pl-3 italic text-gray-800 mb-2">
+    <blockquote className="border-l-4 pl-3 italic text-gray-800 mb-2">
       {children}
     </blockquote>
   ),
@@ -245,16 +245,16 @@ const CallDetailChat: React.FC<CallDetailChatProps> = ({
   ];
 
   return (
-    <div className="flex flex-col h-full bg-black rounded-lg shadow-sm">
-      <div className="flex items-center gap-3 p-4 border-b bg-neutral-800 rounded-t-lg">
-        <div className="flex items-center justify-center w-8 h-8 bg-emerald-800 rounded-full">
-          <MessageSquare className="w-4 h-4 text-white" />
+    <div className="flex flex-col h-full rounded-lg shadow-sm">
+      <div className="flex items-center gap-3 p-4 border-b bg-black/20 rounded-t-lg">
+        <div className="flex items-center justify-center w-8 h-8 bg-[var(--color-text-primary)] rounded-full">
+          <MessageSquare className="w-4 h-4 text-[var(--color-bg-primary)]" />
         </div>
         <div>
-          <h3 className="font-semibold text-neutral-200">
+          <h3 className="font-semibold text-[var(--color-text-primary)]">
             PRISM - Call Analysis
           </h3>
-          <p className="text-xs text-gray-500 flex items-center gap-1">
+          <p className="text-xs text-[var(--color-text-primary)] flex items-center gap-1">
             <span className="w-2 h-2 bg-green-400 rounded-full"></span>
             {callRecord.agent_username || "Agent"} •{" "}
             {callRecord.queue_name || "Queue"}
@@ -262,7 +262,7 @@ const CallDetailChat: React.FC<CallDetailChatProps> = ({
         </div>
       </div>
 
-      <div className="flex-1 overflow-y-auto p-4 space-y-4 bg-neutral-800">
+      <div className="flex-1 overflow-y-auto p-4 space-y-4  bg-black/60">
         {!callRecord && (
           <div className="flex items-center gap-3 p-4 bg-amber-50 border border-amber-200 rounded-lg">
             <AlertCircle className="w-5 h-5 text-amber-600" />
@@ -275,17 +275,17 @@ const CallDetailChat: React.FC<CallDetailChatProps> = ({
         {messages.map((message) => (
           <div
             key={message.id}
-            className={`flex gap-3 ${
-              message.type === "user" ? "justify-end" : "justify-start"
+            className={`flex gap-3  ${
+              message.type === "user" ? "justify-end" : "justify-start "
             }`}
           >
             <div
-              className={`max-w-[85%] ${
+              className={`max-w-[85%]  ${
                 message.type === "user" ? "order-1" : ""
               }`}
             >
               <div
-                className={`rounded-lg px-3 py-2 text-xs ${
+                className={`rounded-lg px-3 py-2 text-xs bg-[var(--color-bg-primary)] ${
                   message.type === "user"
                     ? "bg-emerald-800 text-white"
                     : message.error
@@ -294,13 +294,13 @@ const CallDetailChat: React.FC<CallDetailChatProps> = ({
                 }`}
               >
                 {message.type === "assistant" && !message.error ? (
-                  <div className="prose prose-sm max-w-none text-xs">
+                  <div className="prose prose-sm max-w-none text-xs ">
                     <ReactMarkdown components={MarkdownComponents}>
                       {message.content}
                     </ReactMarkdown>
                   </div>
                 ) : (
-                  <div className="whitespace-pre-wrap text-xs leading-relaxed">
+                  <div className="whitespace-pre-wrap text-xs leading-relaxed ">
                     {message.content}
                   </div>
                 )}
@@ -320,14 +320,14 @@ const CallDetailChat: React.FC<CallDetailChatProps> = ({
           <div className="flex gap-3 justify-start">
             <div className="bg-gray-100 rounded-lg px-3 py-2">
               <div className="flex items-center gap-1">
-                <div className="text-xs text-gray-600 mr-2">Thinking</div>
-                <div className="w-2 h-2 bg-emerald-800 rounded-full animate-bounce"></div>
+                <div className="text-xs text-[var(--color-text-accent)] mr-2">Thinking</div>
+                <div className="w-2 h-2 bg-[var(--color-bg-primary)] rounded-full animate-bounce"></div>
                 <div
-                  className="w-2 h-2 bg-emerald-800 rounded-full animate-bounce"
+                  className="w-2 h-2 bg-[var(--color-bg-primary)] rounded-full animate-bounce"
                   style={{ animationDelay: "0.1s" }}
                 ></div>
                 <div
-                  className="w-2 h-2 bg-emerald-800 rounded-full animate-bounce"
+                  className="w-2 h-2 bg-[var(--color-bg-primary)] rounded-full animate-bounce"
                   style={{ animationDelay: "0.2s" }}
                 ></div>
               </div>
@@ -338,7 +338,7 @@ const CallDetailChat: React.FC<CallDetailChatProps> = ({
         <div ref={messagesEndRef} />
       </div>
 
-      <div className="p-4 border-t border-black bg-neutral-800">
+      <div className="p-4 border-t border-black bg-black/20">
         <div className="flex gap-2">
           <input
             type="text"
@@ -351,12 +351,12 @@ const CallDetailChat: React.FC<CallDetailChatProps> = ({
                 : "Ask me anything about this call..."
             }
             disabled={!callRecord || isTyping}
-            className="flex-1 px-3 py-2 bg-white border border-neutral-200 rounded-md focus:outline-none focus:ring-2 focus:ring-emerald-800 focus:border-emerald-800 disabled:bg-gray-100 disabled:cursor-not-allowed text-sm"
+            className="flex-1 px-3 py-2 bg-white border border-neutral-200 rounded-md focus:outline-none focus:ring-2 focus:ring-[var(--color-text-primary)] focus:border-[var(--color-text-primary)] disabled:bg-gray-100 disabled:cursor-not-allowed text-sm"
           />
           <button
             onClick={handleSendMessage}
             disabled={!inputValue.trim() || !callRecord || isTyping}
-            className="px-4 py-2 bg-emerald-800 text-white rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-emerald-800 focus:ring-offset-2 disabled:bg-gray-300 disabled:cursor-not-allowed transition-colors"
+            className="px-4 py-2 bg-black/60 text-white rounded-md hover:bg-black/40 focus:outline-none focus:ring-2 focus:ring-[var(--color-text-primary)] focus:border-[var(--color-text-primary)] disabled:bg-gray-300 disabled:cursor-not-allowed transition-colors"
           >
             <Send className="w-4 h-4" />
           </button>
@@ -369,7 +369,7 @@ const CallDetailChat: React.FC<CallDetailChatProps> = ({
                 key={prompt}
                 onClick={() => setInputValue(prompt)}
                 disabled={isTyping}
-                className="px-2 py-1 text-xs bg-black text-neutral-200 rounded hover:bg-gray-50 hover:text-black hover:border-gray-300 transition-colors disabled:opacity-50"
+                className="px-2 py-1 text-xs bg-black/60 text-neutral-200 rounded hover:bg-gray-50 hover:text-black hover:border-gray-300 transition-colors disabled:opacity-50"
               >
                 {prompt}
               </button>

@@ -626,39 +626,39 @@ const CallRecordsChat: React.FC<CallRecordsChatProps> = ({
   const hasFullDispositionData = allRecords && allRecords.length > filteredRecords.length;
 
   return (
-    <div className="flex flex-col h-full bg-black rounded-lg shadow-xl">
-      <div className="flex items-center gap-3 p-4 bg-black rounded-t-lg">
+    <div className="flex flex-col h-full bg-black/60 rounded-lg shadow-xl">
+      <div className="flex items-center gap-3 p-4 bg-black/60 rounded-t-lg">
         <div className="flex-1">
-          <h3 className="font-bold text-white text-lg">PRISM AI Analytics</h3>
-          <div className="flex items-center gap-4 text-sm text-white">
+          <h3 className="font-bold text-[var(--color-text-primary)] text-lg">PRISM AI Analytics</h3>
+          <div className="flex items-center gap-4 text-sm text-[var(--color-text-primary)]">
             <span className="flex items-center gap-2">
               <span className="w-2 h-2 bg-emerald-800 rounded-full animate-pulse"></span>
               {loading
                 ? "Loading data..."
                 : `${filteredRecords.length.toLocaleString()} records`}
             </span>
-            {hasFullDispositionData && (
+            {/* {hasFullDispositionData && (
               <span className="flex items-center gap-2 text-emerald-300">
                 <Database className="w-4 h-4" />
                 <span className="text-xs">
                   Full disposition data available ({allRecords?.length.toLocaleString()} total)
                 </span>
               </span>
-            )}
+            )} */}
           </div>
         </div>
         {retryCount > 0 && (
-          <div className="flex items-center gap-2 text-white text-sm">
+          <div className="flex items-center gap-2 text-[var(--color-text-primary)] text-sm">
             <Loader2 className="w-4 h-4 animate-spin" />
             Retry {retryCount}/5
           </div>
         )}
       </div>
 
-      <div className="flex-1 overflow-y-auto p-4 space-y-4 bg-neutral-800">
+      <div className="flex-1 overflow-y-auto p-4 space-y-4 bg-black/80">
         {filteredRecords.length === 0 && !loading && (
-          <div className="flex items-center gap-3 p-4 bg-white border border-emerald-800 rounded-lg">
-            <AlertCircle className="w-5 h-5 text-emerald-800" />
+          <div className="flex items-center gap-3 p-4 bg-white border rounded-lg">
+            <AlertCircle className="w-5 h-5" />
             <div className="text-sm text-black">
               No call records available for analysis. Please adjust your filters
               or check your data source.
@@ -714,7 +714,7 @@ const CallRecordsChat: React.FC<CallRecordsChatProps> = ({
                       </span>
                     )}
                     {message.metadata.hasFullDispositions && (
-                      <span className="text-emerald-600 font-medium">
+                      <span className="text-[var(--color-text-primary)] font-medium">
                         ✓ Full disposition data
                       </span>
                     )}
@@ -734,7 +734,7 @@ const CallRecordsChat: React.FC<CallRecordsChatProps> = ({
 
         {isTyping && (
           <div className="flex gap-3 justify-start">
-            <div className="bg-white rounded-xl px-4 py-3 border border-emerald-800">
+            <div className="bg-white rounded-xl px-4 py-3 border ">
               <div className="flex items-center gap-2">
                 <div className="text-sm text-black">
                   {dataComplexity?.complexity === "extreme"
@@ -744,13 +744,13 @@ const CallRecordsChat: React.FC<CallRecordsChatProps> = ({
                     : "Thinking..."}
                 </div>
                 <div className="flex gap-1">
-                  <div className="w-2 h-2 bg-emerald-800 rounded-full animate-bounce"></div>
+                  <div className="w-2 h-2 bg-[var(--color-bg-primary)] rounded-full animate-bounce"></div>
                   <div
-                    className="w-2 h-2 bg-emerald-800 rounded-full animate-bounce"
+                    className="w-2 h-2 bg-[var(--color-bg-primary)] rounded-full animate-bounce"
                     style={{ animationDelay: "0.1s" }}
                   ></div>
                   <div
-                    className="w-2 h-2 bg-emerald-800 rounded-full animate-bounce"
+                    className="w-2 h-2 bg-[var(--color-bg-primary)] rounded-full animate-bounce"
                     style={{ animationDelay: "0.2s" }}
                   ></div>
                 </div>
@@ -762,7 +762,7 @@ const CallRecordsChat: React.FC<CallRecordsChatProps> = ({
         <div ref={messagesEndRef} />
       </div>
 
-      <div className="p-4 bg-black">
+      <div className="p-4 bg-black/60">
         <div className="flex gap-3">
           <input
             type="text"
@@ -783,7 +783,7 @@ const CallRecordsChat: React.FC<CallRecordsChatProps> = ({
                 : "Ask me anything about your call data..."
             }
             disabled={loading || filteredRecords.length === 0 || isTyping}
-            className="flex-1 px-4 py-3 bg-white border border-emerald-800 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-800 focus:border-emerald-800 disabled:bg-white disabled:cursor-not-allowed text-black placeholder-emerald-800 text-sm shadow-inner"
+            className="flex-1 px-4 py-3 bg-white rounded-lg focus:outline-none focus:ring-2 focus:ring-[var(--color-text-primary)] focus:border-[var(--color-text-primary)] disabled:bg-white disabled:cursor-not-allowed text-black text-sm shadow-inner"
           />
           <button
             onClick={() => handleSendMessage()}
@@ -793,7 +793,7 @@ const CallRecordsChat: React.FC<CallRecordsChatProps> = ({
               filteredRecords.length === 0 ||
               isTyping
             }
-            className="px-6 py-3 bg-emerald-800 text-white rounded-lg hover:bg-emerald-800 focus:outline-none focus:ring-2 focus:ring-emerald-800 focus:ring-offset-2 focus:ring-offset-black disabled:bg-white disabled:text-emerald-800 disabled:cursor-not-allowed transition-all duration-200 shadow-lg border border-emerald-800"
+            className="px-6 py-3 text-white rounded-lg  focus:outline-none focus:ring-2 focus:ring-[var(--color-text-primary)] focus:border-[var(--color-text-primary)] focus:ring-offset-black disabled:bg-white disabled:text-[var(--color-text-primary)] disabled:cursor-not-allowed transition-all duration-200 shadow-lg"
           >
             <Send className="w-5 h-5" />
           </button>
@@ -807,7 +807,7 @@ const CallRecordsChat: React.FC<CallRecordsChatProps> = ({
                   key={prompt}
                   onClick={() => handleSendMessage(prompt)}
                   disabled={loading || isTyping}
-                  className="px-3 py-2 text-xs bg-white hover:bg-emerald-800 text-black hover:text-white rounded-md transition-colors disabled:opacity-50 text-left border border-emerald-800"
+                  className="px-3 py-2 text-xs bg-white hover:bg-black/60 hover:text-white rounded-md transition-colors disabled:opacity-50 text-left"
                 >
                   {prompt}
                 </button>

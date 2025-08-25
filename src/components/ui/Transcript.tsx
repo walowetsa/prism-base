@@ -27,8 +27,8 @@ const Transcript: React.FC<TranscriptProps> = ({
 
   const getSpeakerStyling = (speakerRole: string) => {
     return speakerRole === 'Agent' 
-      ? 'bg-neutral-800 border-l-4 border-emerald-800' 
-      : 'bg-neutral-800 border-r-4 border-blue-500';
+      ? 'bg-[var(--color-bg-secondary)] border-l-4 border-emerald-800' 
+      : 'bg-[var(--color-bg-secondary)] border-r-4 border-blue-500';
   };
 
   if (!data || data.length === 0) {
@@ -95,7 +95,7 @@ const Transcript: React.FC<TranscriptProps> = ({
       ))}
 
       {data.length > 0 && (
-        <div className="mt-6 p-3 bg-neutral-800 rounded-lg border border-neutral-700">
+        <div className="mt-6 p-3 bg-[var(--color-bg-primary)] rounded-lg border border-neutral-700">
           <div className="grid grid-cols-2 gap-4 text-xs">
             <div>
               <span className="text-neutral-400">Total Segments:</span>

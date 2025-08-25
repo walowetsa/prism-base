@@ -277,18 +277,18 @@ const CallLogPage = () => {
   }
 
   return (
-    <div className="flex-1 flex flex-col bg-neutral-900">
+    <div className="flex-1 flex flex-col bg-[var(--color-bg-primary)]">
       <div className="flex-1 p-4">
         <div className="max-w-full">
           {/* Header */}
           <div className="mb-6">
             <button
               onClick={() => router.back()}
-              className="mb-4 px-4 py-2 text-sm text-emerald-800 hover:text-gray-800 transition-colors cursor-pointer"
+              className="mb-4 px-4 py-2 text-sm text-[var(--color-text-primary)] hover:text-gray-800 transition-colors cursor-pointer"
             >
               ← Back to Call Logs
             </button>
-            <h1 className="text-3xl font-bold text-emerald-800">
+            <h1 className="text-3xl font-bold text-[var(--color-text-primary)]">
               Call Details
             </h1>
             <p className="text-gray-600 mt-1">Contact ID: {contact_id}</p>
@@ -306,56 +306,56 @@ const CallLogPage = () => {
   dark:[&::-webkit-scrollbar-thumb]:bg-neutral-500"
             >
               {/* Call Overview */}
-              <div className="bg-black rounded-lg shadow-sm p-6">
-                <h2 className="text-xl font-semibold text-emerald-800 mb-4">
+              <div className="bg-black/60 rounded-lg shadow-sm p-6">
+                <h2 className="text-xl font-semibold text-[var(--color-text-primary)] mb-4">
                   Overview
                 </h2>
                 <div className="grid grid-cols-1 gap-4">
                   <div>
-                    <label className="block text-sm font-medium text-emerald-800 mb-1">
+                    <label className="block text-sm font-medium text-[var(--color-text-primary)] mb-1">
                       Agent
                     </label>
-                    <p className="text-neutral-200">
+                    <p className="text-[var(--color-text-accent)]">
                       {callRecord.agent_username || "N/A"}
                     </p>
                   </div>
                   <div>
-                    <label className="block text-sm font-medium text-emerald-800 mb-1">
+                    <label className="block text-sm font-medium text-[var(--color-text-primary)] mb-1">
                       Queue
                     </label>
-                    <p className="text-neutral-200">
+                    <p className="text-[var(--color-text-accent)]">
                       {callRecord.queue_name || "N/A"}
                     </p>
                   </div>
                   <div>
-                    <label className="block text-sm font-medium text-emerald-800 mb-1">
+                    <label className="block text-sm font-medium text-[var(--color-text-primary)] mb-1">
                       Timestamp
                     </label>
-                    <p className="text-neutral-200">
+                    <p className="text-[var(--color-text-accent)]">
                       {formatTimestamp(callRecord.initiation_timestamp)}
                     </p>
                   </div>
                   <div>
-                    <label className="block text-sm font-medium text-emerald-800 mb-1">
+                    <label className="block text-sm font-medium text-[var(--color-text-primary)] mb-1">
                       Duration
                     </label>
-                    <p className="text-neutral-200">
+                    <p className="text-[var(--color-text-accent)]">
                       {formatDuration(callRecord.call_duration)}
                     </p>
                   </div>
                   <div>
-                    <label className="block text-sm font-medium text-emerald-800 mb-1">
+                    <label className="block text-sm font-medium text-[var(--color-text-primary)] mb-1">
                       Disposition
                     </label>
-                    <p className="text-neutral-200">
+                    <p className="text-[var(--color-text-accent)]">
                       {callRecord.disposition_title || "N/A"}
                     </p>
                   </div>
                   <div>
-                    <label className="block text-sm font-medium text-emerald-800 mb-1">
+                    <label className="block text-sm font-medium text-[var(--color-text-primary)] mb-1">
                       Customer CLI
                     </label>
-                    <p className="text-neutral-200">
+                    <p className="text-[var(--color-text-accent)]">
                       {callRecord.customer_cli || "N/A"}
                     </p>
                   </div>
@@ -364,8 +364,8 @@ const CallLogPage = () => {
 
               {/* Call Summary */}
               {callRecord.call_summary && (
-                <div className="bg-black rounded-lg shadow-sm p-6">
-                  <h2 className="text-xl font-semibold text-emerald-800 mb-4">
+                <div className="bg-black/60 rounded-lg shadow-sm p-6">
+                  <h2 className="text-xl font-semibold text-[var(--color-text-primary)] mb-4">
                     Summary
                   </h2>
                   <p className="text-neutral-200 leading-relaxed text-sm">
@@ -375,8 +375,8 @@ const CallLogPage = () => {
               )}
 
               {/* Technical Details */}
-              <div className="bg-black rounded-lg shadow-sm p-6">
-                <h3 className="text-lg font-semibold text-emerald-800 mb-3">
+              <div className="bg-black/60 rounded-lg shadow-sm p-6">
+                <h3 className="text-lg font-semibold text-[var(--color-text-primary)] mb-3">
                   Technical Details
                 </h3>
                 <div className="space-y-3 text-sm">
@@ -418,8 +418,8 @@ const CallLogPage = () => {
               {/* Sentiment Analysis */}
               {callRecord.sentiment_analysis &&
                 callRecord.sentiment_analysis.length > 0 && (
-                  <div className="bg-black rounded-lg shadow-sm p-6">
-                    <h3 className="text-lg font-semibold text-emerald-800 mb-4">
+                  <div className="bg-black/60 rounded-lg shadow-sm p-6">
+                    <h3 className="text-lg font-semibold text-[var(--color-text-primary)] mb-4">
                       Sentiment Analysis
                     </h3>
 
@@ -506,7 +506,7 @@ const CallLogPage = () => {
                                 ([speaker, speakerStats]) => (
                                   <div
                                     key={speaker}
-                                    className="bg-neutral-800 rounded-lg p-3"
+                                    className="bg-[var(--color-bg-primary)] rounded-lg p-3"
                                   >
                                     <div className="flex items-center justify-between mb-2">
                                       <span className="text-emerald-400 font-medium text-sm">
@@ -579,7 +579,7 @@ const CallLogPage = () => {
 
             {/* Middle Column - Transcript */}
             <div
-              className="bg-black rounded-lg shadow-sm p-6 max-h-[calc(100vh-240px)] overflow-y-scroll [&::-webkit-scrollbar]:w-2
+              className="bg-black/60 rounded-lg shadow-sm p-6 max-h-[calc(100vh-240px)] overflow-y-scroll [&::-webkit-scrollbar]:w-2
   [&::-webkit-scrollbar-track]:rounded-full
   [&::-webkit-scrollbar-track]:bg-gray-100
   [&::-webkit-scrollbar-thumb]:rounded-full
@@ -588,7 +588,7 @@ const CallLogPage = () => {
   dark:[&::-webkit-scrollbar-thumb]:bg-neutral-500"
             >
               <div className="flex items-center justify-between mb-4">
-                <h2 className="text-xl font-semibold text-emerald-800">
+                <h2 className="text-xl font-semibold text-[var(--color-text-primary)]">
                   Transcript
                 </h2>
               </div>
@@ -601,7 +601,7 @@ const CallLogPage = () => {
             </div>
 
             {/* Right Column - Chat Interface */}
-            <div className="bg-black rounded-lg shadow-sm p-0 flex flex-col max-h-[calc(100vh-240px)]">
+            <div className="bg-black/60 rounded-lg shadow-sm p-0 flex flex-col max-h-[calc(100vh-240px)]">
               <CallDetailChat
                 callRecord={callRecord}
                 transcriptData={transcriptData}

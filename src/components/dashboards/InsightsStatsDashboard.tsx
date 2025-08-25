@@ -149,7 +149,7 @@ const InsightsStatsDashboard: React.FC<InsightsStatsDashboardProps> = ({
 
     const sentimentData = [
       { name: "Positive", count: sentimentCounts.POSITIVE, color: "#065f46" },
-      { name: "Neutral", count: sentimentCounts.NEUTRAL, color: "#10b981" },
+      { name: "Neutral", count: sentimentCounts.NEUTRAL, color: "#67676a" },
       { name: "Negative", count: sentimentCounts.NEGATIVE, color: "#dc2626" },
     ];
 
@@ -196,29 +196,29 @@ const InsightsStatsDashboard: React.FC<InsightsStatsDashboardProps> = ({
   dark:[&::-webkit-scrollbar-track]:bg-neutral-700
   dark:[&::-webkit-scrollbar-thumb]:bg-neutral-500">
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-        <div className="bg-black p-6 rounded-lg shadow-sm">
-          <div className="text-2xl font-bold text-emerald-800">
+        <div className="bg-black/60 p-6 rounded-lg shadow-sm">
+          <div className="text-2xl font-bold text-[var(--color-text-primary)]">
             {statistics.totalCalls}
           </div>
           <div className="text-sm text-neutral-200">Total Calls</div>
         </div>
 
-        <div className="bg-black p-6 rounded-lg shadow-sm">
-          <div className="text-2xl font-bold text-emerald-800">
+        <div className="bg-black/60 p-6 rounded-lg shadow-sm">
+          <div className="text-2xl font-bold text-[var(--color-text-primary)]">
             {statistics.successfulCalls}
           </div>
           <div className="text-sm text-neutral-200">Leads Generated</div>
         </div>
 
-        <div className="bg-black p-6 rounded-lg shadow-sm">
-          <div className="text-2xl font-bold text-emerald-800">
+        <div className="bg-black/60 p-6 rounded-lg shadow-sm">
+          <div className="text-2xl font-bold text-[var(--color-text-primary)]">
             {formatPercentage(statistics.successRate)}
           </div>
           <div className="text-sm text-neutral-200">Generation Rate</div>
         </div>
 
-        <div className="bg-black p-6 rounded-lg shadow-sm">
-          <div className="text-2xl font-bold text-emerald-800">
+        <div className="bg-black/60 p-6 rounded-lg shadow-sm">
+          <div className="text-2xl font-bold text-[var(--color-text-primary)]">
             {formatDuration(statistics.averageDurationSeconds)}
           </div>
           <div className="text-sm text-neutral-200">Avg Handle Time</div>
@@ -227,8 +227,8 @@ const InsightsStatsDashboard: React.FC<InsightsStatsDashboardProps> = ({
 
       {/* charts */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        <div className="bg-black p-6 rounded-lg shadow-sm">
-          <h3 className="text-lg font-semibold text-emerald-800 mb-4">
+        <div className="bg-black/60 p-6 rounded-lg shadow-sm">
+          <h3 className="text-lg font-semibold text-[var(--color-text-primary)] mb-4">
             Calls by Agent
           </h3>
           <div className="space-y-3">
@@ -242,7 +242,7 @@ const InsightsStatsDashboard: React.FC<InsightsStatsDashboardProps> = ({
                   </span>
                   <div className="flex items-center gap-2">
                     <div
-                      className="bg-emerald-800 h-2 rounded"
+                      className="bg-[var(--color-text-accent)] h-2 rounded"
                       style={{
                         width: `${Math.max(
                           (count /
@@ -264,8 +264,8 @@ const InsightsStatsDashboard: React.FC<InsightsStatsDashboardProps> = ({
           </div>
         </div>
 
-        <div className="bg-black p-6 rounded-lg shadow-sm">
-          <h3 className="text-lg font-semibold text-emerald-600 mb-4">
+        <div className="bg-black/60 p-6 rounded-lg shadow-sm">
+          <h3 className="text-lg font-semibold text-[var(--color-text-primary)] mb-4">
             Top Dispositions
           </h3>
           <div className="space-y-3">
@@ -282,12 +282,12 @@ const InsightsStatsDashboard: React.FC<InsightsStatsDashboardProps> = ({
                     {disposition}
                   </span>
                   {successfulOutcomes.includes(disposition) && (
-                    <span className="text-emerald-800 text-sm">✓</span>
+                    <span className="text-[var(--color-text-primary)] text-sm">✓</span>
                   )}
                 </div>
                 <div className="flex items-center gap-2 ml-2">
                   <div
-                    className="bg-emerald-800 h-2 rounded"
+                    className="bg-[var(--color-text-accent)] h-2 rounded"
                     style={{
                       width: `${Math.max(
                         (count / statistics.topDispositions[0][1]) * 100,
@@ -307,14 +307,14 @@ const InsightsStatsDashboard: React.FC<InsightsStatsDashboardProps> = ({
       </div>
 
       {statistics.totalCalls > 0 && (
-        <div className="bg-black p-6 rounded-lg shadow-sm">
+        <div className="bg-black/60 p-6 rounded-lg shadow-sm">
           <h3 className="text-lg font-semibold text-neutral-200 mb-4">
             Leads Generated
           </h3>
           <div className="flex items-center gap-4">
             <div className="flex-1 bg-neutral-800 rounded-full h-4 overflow-hidden">
               <div
-                className="bg-emerald-800 h-full transition-all duration-500 rounded-r-full"
+                className="bg-[var(--color-text-accent)] h-full transition-all duration-500 rounded-r-full"
                 style={{ width: `${statistics.successRate}%` }}
               ></div>
             </div>
@@ -327,7 +327,7 @@ const InsightsStatsDashboard: React.FC<InsightsStatsDashboardProps> = ({
       )}
 
       {statistics.dailyVolumeData.length > 0 && (
-        <div className="bg-black p-6 rounded-lg shadow-sm">
+        <div className="bg-black/60 p-6 rounded-lg shadow-sm">
           <h3 className="text-lg font-semibold text-neutral-200 mb-4">
             Daily Call Volume
           </h3>
@@ -340,7 +340,7 @@ const InsightsStatsDashboard: React.FC<InsightsStatsDashboardProps> = ({
                 <Tooltip
                   contentStyle={{
                     backgroundColor: "#000",
-                    border: "1px solid #065f46",
+                    border: "1px solid #d1d5db",
                     borderRadius: "8px",
                     color: "#d1d5db",
                   }}
@@ -349,10 +349,10 @@ const InsightsStatsDashboard: React.FC<InsightsStatsDashboardProps> = ({
                 <Line
                   type="monotone"
                   dataKey="calls"
-                  stroke="#065f46"
+                  stroke="#d1d5db"
                   strokeWidth={2}
-                  dot={{ fill: "#065f46", strokeWidth: 2, r: 4 }}
-                  activeDot={{ r: 6, fill: "#065f46" }}
+                  dot={{ fill: "#d1d5db", strokeWidth: 2, r: 4 }}
+                  activeDot={{ r: 6, fill: "#d1d5db" }}
                 />
               </LineChart>
             </ResponsiveContainer>
@@ -361,7 +361,7 @@ const InsightsStatsDashboard: React.FC<InsightsStatsDashboardProps> = ({
       )}
 
       {statistics.sentimentData.some((item) => item.count > 0) && (
-        <div className="bg-black p-6 rounded-lg shadow-sm">
+        <div className="bg-black/60 p-6 rounded-lg shadow-sm">
           <h3 className="text-lg font-semibold text-neutral-200 mb-4">
             Call Sentiment Analysis
           </h3>
@@ -377,7 +377,7 @@ const InsightsStatsDashboard: React.FC<InsightsStatsDashboardProps> = ({
                 <Tooltip
                   contentStyle={{
                     backgroundColor: "#000",
-                    border: "1px solid #065f46",
+                    border: "1px solid #d1d5db",
                     borderRadius: "8px",
                     color: "#d1d5db",
                   }}

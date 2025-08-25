@@ -85,10 +85,10 @@ const CallLogFilters: React.FC<CallLogFiltersProps> = ({
       "px-3 py-1.5 text-sm font-medium rounded-md transition-colors duration-200";
 
     if (isSelected) {
-      return `${baseClass} bg-[var(--color-bg-secondary)] text-white shadow-sm`;
+      return `${baseClass} bg-black/60 text-white shadow-sm`;
     }
 
-    return `${baseClass} bg-[var(--color-bg-primary)] text-[var(--color-text-primary)] border-gray-300 hover:bg-gray-50/20 `;
+    return `${baseClass} bg-[var(--color-bg-secondary)] text-[var(--color-text-primary)] border-gray-300 hover:bg-gray-50/20 `;
   };
 
   const formatDateForInput = (date: Date): string => {
@@ -190,7 +190,7 @@ const CallLogFilters: React.FC<CallLogFiltersProps> = ({
             id="agent-select"
             value={selectedAgent}
             onChange={(e) => onAgentChange(e.target.value)}
-            className="px-3 py-1.5 text-sm border border-gray-300/40 rounded-full bg-[var(--color-bg-secondary)] text-[var(--color-text-primary)] hover:border-gray-400 focus:outline-none focus:ring-2 focus:ring-[var(--color-text-primary)] focus:border-[var(--color-text-primary)] transition-colors duration-200 min-w-[150px]"
+            className="px-3 py-1.5 text-sm border border-gray-300/20 rounded-full bg-[var(--color-bg-secondary)] text-[var(--color-text-primary)] hover:border-gray-400 focus:outline-none focus:ring-2 focus:ring-[var(--color-text-primary)] focus:border-[var(--color-text-primary)] transition-colors duration-200 min-w-[150px]"
           >
             <option value="" className="bg-[var(--color-bg-secondary)]">All Agents</option>
             {agents.map((agent) => (
@@ -339,12 +339,12 @@ const CallLogFilters: React.FC<CallLogFiltersProps> = ({
                 selectedFilter === option.value
               )} ${
                 index === 0
-                  ? "rounded-l-full rounded-r-md border border-[var(--color-bg-primary)]"
+                  ? "rounded-l-full rounded-r-md bg-[var(--color-bg-secondary)] border-[var(--color-bg-primary)]"
                   : index === filterOptions.length - 2
-                  ? "rounded-r-full rounded-l-md border border-[var(--color-bg-primary)]"
+                  ? "rounded-r-full rounded-l-md bg-[var(--color-bg-secondary)] border-[var(--color-bg-primary)]"
                   : index === filterOptions.length - 1
                   ? "ml-4"
-                  : "rounded-none"
+                  : "rounded-none bg-[var(--color-bg-secondary)]"
               }`}
             >
               {option.label}

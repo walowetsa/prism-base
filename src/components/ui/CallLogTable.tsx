@@ -374,8 +374,8 @@ const CallLogTable: React.FC<CallLogTableProps> = ({ className }) => {
 
   const getSortableHeaderClass = (field: SortField) => {
     const baseClass =
-      "px-4 py-3 text-left text-xs font-medium text-emerald-800 uppercase tracking-wider cursor-pointer hover:bg-gray-100 transition-colors select-none";
-    const activeClass = sortState.field === field ? "bg-gray-100" : "";
+      "px-4 py-3 text-left text-xs font-medium text-emerald-800 uppercase tracking-wider cursor-pointer hover:bg-gray-100/20 transition-colors select-none";
+    const activeClass = sortState.field === field ? "bg-black/60" : "";
     return `${baseClass} ${activeClass}`;
   };
 
@@ -404,6 +404,8 @@ const CallLogTable: React.FC<CallLogTableProps> = ({ className }) => {
       </div>
     );
   }
+
+
 
   return (
     <div
@@ -483,7 +485,8 @@ const CallLogTable: React.FC<CallLogTableProps> = ({ className }) => {
                     </span>
                   </div>
                 </th>
-                <th className="px-4 py-3 text-center text-xs font-medium text-[var(--color-text-primary)] uppercase tracking-wider w-16"></th>
+                <th className="px-4 py-3 text-center text-xs font-medium text-[var(--color-text-primary)] uppercase tracking-wider w-16">Lead</th>
+                {/* Add Sentiment Score */}
                 <th className="px-4 py-3 text-left text-xs font-medium text-[var(--color-text-primary)] uppercase tracking-wider">
                   Summary
                 </th>
@@ -533,6 +536,9 @@ const CallLogTable: React.FC<CallLogTableProps> = ({ className }) => {
                       title={record.call_summary || "N/A"}
                     >
                       {record.call_summary || "N/A"}
+                      {
+                        // add sentiment score (pos/(pos+neg))
+                      }
                     </div>
                   </td>
                   <td className="px-4 py-3 text-sm text-[var(--color-text-accent)] w-20 relative">
@@ -585,8 +591,8 @@ const CallLogTable: React.FC<CallLogTableProps> = ({ className }) => {
               disabled={!pagination.hasPrev || loading}
               className={`px-3 py-2 text-sm font-medium rounded-md ${
                 !pagination.hasPrev || loading
-                  ? "bg-neutral-200 text-gray-400 cursor-not-allowed"
-                  : "bg-neutral-200 text-gray-700 border border-gray-300 hover:bg-gray-50"
+                  ? "bg-[var(--color-bg-secondary)] text-[var(--color-text-primary)] cursor-not-allowed"
+                  : "bg-[var(--color-bg-secondary)] text-[var(--color-text-primary)] hover:bg-gray-50/40"
               }`}
             >
               Previous
@@ -600,10 +606,10 @@ const CallLogTable: React.FC<CallLogTableProps> = ({ className }) => {
                   disabled={loading}
                   className={`px-3 py-2 text-sm font-medium rounded-md ${
                     currentPage === page
-                      ? "bg-emerald-800 text-white"
+                      ? "bg-black/60 text-white"
                       : loading
-                      ? "bg-neutral-200 text-gray-400 cursor-not-allowed"
-                      : "bg-neutral-200 text-gray-700 border border-gray-300 hover:bg-gray-50"
+                      ? "bg-[var(--color-bg-secondary)] text-[var(--color-text-primary)] cursor-not-allowed"
+                      : "bg-[var(--color-bg-secondary)] text-[var(--color-text-primary)] hover:bg-gray-50/40"
                   }`}
                 >
                   {page}
@@ -616,8 +622,8 @@ const CallLogTable: React.FC<CallLogTableProps> = ({ className }) => {
               disabled={!pagination.hasNext || loading}
               className={`px-3 py-2 text-sm font-medium rounded-md ${
                 !pagination.hasNext || loading
-                  ? "bg-neutral-200 text-gray-400 cursor-not-allowed"
-                  : "bg-neutral-200 text-gray-700 border border-gray-300 hover:bg-gray-50"
+                  ? "bg-[var(--color-bg-secondary)] text-[var(--color-text-primary)] cursor-not-allowed"
+                  : "bg-[var(--color-bg-secondary)] text-[var(--color-text-primary)] hover:bg-gray-50/40"
               }`}
             >
               Next
