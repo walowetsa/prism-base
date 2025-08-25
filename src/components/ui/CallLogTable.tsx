@@ -506,21 +506,21 @@ const CallLogTable: React.FC<CallLogTableProps> = ({ className }) => {
                   key={record.contact_id}
                   className="hover:bg-neutral-600/20 transition-colors bg-[var(--color-bg-secondary)]/60"
                 >
-                  <td className="px-4 py-3 text-sm text-[var(--color-text-accent)] w-64 truncate">
+                  <td className="px-4 py-3 text-sm text-[var(--color-text-primary)] w-64 truncate">
                     {
                       record.agent_username === 'T10085496@tsagroup.com.au' ? 'mdunstan@tsagroup.com.au' : record.agent_username === 'T10085497@tsagroup.com.au' ? 'mwilson.tsagroup.com.au' : record.agent_username === 'T10085494@tsagroup.com.au' ? 'vride.tsagroup.com.au' : record.agent_username === 'T10085498@tsagroup.com.au' ? 'bskipper.tsagroup.com.au' : record.agent_username === 'T10085495@tsagroup.com.au' ? 'ksingh@tsagroup.com.au' : record.agent_username === 'T10085499@tsagroup.com.au' ? 'elima@tsagroup.com.au' : record.agent_username === 'T10085523@tsagroup.com.au' ? 'srana@tsagroup.com.au' : record.agent_username === 'T10085526@tsagroup.com.au' ? 'ezgrajewski@tsagroup.com.au' : record.agent_username === 'T10085531@tsagroup.com.au' ? 'hcrooks.tsagroup.com.au' : record.agent_username
                     }
                   </td>
-                  <td className="px-4 py-3 text-sm text-[var(--color-text-accent)] w-64">
+                  <td className="px-4 py-3 text-sm text-[var(--color-text-primary)] w-64">
                     {formatTimestamp(record.initiation_timestamp)}
                   </td>
-                  <td className="px-4 py-3 text-sm text-[var(--color-text-accent)] w-24">
+                  <td className="px-4 py-3 text-sm text-[var(--color-text-primary)] w-24">
                     {formatCallDuration(record.call_duration)}
                   </td>
-                  <td className="px-4 py-3 text-sm text-[var(--color-text-accent)] w-80 truncate">
+                  <td className="px-4 py-3 text-sm text-[var(--color-text-primary)] w-80 truncate">
                     {record.disposition_title || "N/A"}
                   </td>
-                  <td className="px-4 py-3 text-sm text-[var(--color-text-accent)] w-16 text-center">
+                  <td className="px-4 py-3 text-sm text-[var(--color-text-primary)] w-16 text-center">
                     {isSuccessfulOutcome(record.disposition_title) && (
                       <span
                         className="text-green-400 text-lg"
@@ -530,7 +530,7 @@ const CallLogTable: React.FC<CallLogTableProps> = ({ className }) => {
                       </span>
                     )}
                   </td>
-                  <td className="px-4 py-3 text-sm text-[var(--color-text-accent)]">
+                  <td className="px-4 py-3 text-sm text-[var(--color-text-primary)]">
                     <div
                       className="truncate"
                       title={record.call_summary || "N/A"}

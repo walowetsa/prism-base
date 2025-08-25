@@ -314,7 +314,7 @@ const InsightsStatsDashboard: React.FC<InsightsStatsDashboardProps> = ({
           <div className="flex items-center gap-4">
             <div className="flex-1 bg-neutral-800 rounded-full h-4 overflow-hidden">
               <div
-                className="bg-[var(--color-text-accent)] h-full transition-all duration-500 rounded-r-full"
+                className="bg-gradient-to-r from-[var(--color-prism-blue)] to-[var(--color-prism-orange)] h-full transition-all duration-500 rounded-r-full"
                 style={{ width: `${statistics.successRate}%` }}
               ></div>
             </div>

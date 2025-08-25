@@ -180,12 +180,12 @@ const CallLogFilters: React.FC<CallLogFiltersProps> = ({
         </div>
         {/* filter by agent */}
         <div className="flex items-center">
-          <label
+          {/* <label
             htmlFor="agent-select"
             className="mr-2 text-sm font-medium text-[var(--color-text-primary)]"
           >
             Agent:
-          </label>
+          </label> */}
           <select
             id="agent-select"
             value={selectedAgent}
@@ -220,12 +220,12 @@ const CallLogFilters: React.FC<CallLogFiltersProps> = ({
         </div>
 
         <div className="flex items-center" ref={dispositionDropdownRef}>
-          <label
+          {/* <label
             htmlFor="disposition-select"
             className="mr-2 text-sm font-medium text-[var(--color-text-primary)]"
           >
             Disposition:
-          </label>
+          </label> */}
           <div className="relative">
             <button
               type="button"
