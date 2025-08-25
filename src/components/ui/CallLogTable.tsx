@@ -448,7 +448,7 @@ const CallLogTable: React.FC<CallLogTableProps> = ({ className }) => {
   dark:[&::-webkit-scrollbar-track]:bg-neutral-700
   dark:[&::-webkit-scrollbar-thumb]:bg-neutral-500"
         >
-          <table className="w-full table-fixed ">
+          <table className="w-full table-fixed">
             <thead className="bg-[var(--color-bg-secondary)] border-b border-[var(--color-bg-secondary)] sticky top-0 z-10">
               <tr>
                 <th
@@ -501,7 +501,7 @@ const CallLogTable: React.FC<CallLogTableProps> = ({ className }) => {
               {callRecords.map((record) => (
                 <tr
                   key={record.contact_id}
-                  className="hover:bg-neutral-600/20 transition-colors"
+                  className="hover:bg-neutral-600/20 transition-colors bg-[var(--color-bg-secondary)]/60"
                 >
                   <td className="px-4 py-3 text-sm text-[var(--color-text-accent)] w-64 truncate">
                     {
