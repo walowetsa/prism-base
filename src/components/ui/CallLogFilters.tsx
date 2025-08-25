@@ -85,10 +85,10 @@ const CallLogFilters: React.FC<CallLogFiltersProps> = ({
       "px-3 py-1.5 text-sm font-medium rounded-md transition-colors duration-200";
 
     if (isSelected) {
-      return `${baseClass} bg-emerald-800 text-white shadow-sm`;
+      return `${baseClass} bg-[var(--color-bg-secondary)] text-white shadow-sm`;
     }
 
-    return `${baseClass} bg-neutral-200 text-gray-700 border-gray-300 hover:bg-gray-50 hover:border-gray-400`;
+    return `${baseClass} bg-[var(--color-bg-primary)] text-[var(--color-text-primary)] border-gray-300 hover:bg-gray-50/20 `;
   };
 
   const formatDateForInput = (date: Date): string => {
@@ -157,7 +157,7 @@ const CallLogFilters: React.FC<CallLogFiltersProps> = ({
           <button
             onClick={handleRefresh}
             disabled={disabled || isRefreshing}
-            className={`bg-black w-8 h-8 rounded-full flex items-center justify-center cursor-pointer group text-emerald-600`}
+            className={`bg-[var(--color-bg-secondary)] w-8 h-8 rounded-full flex items-center justify-center cursor-pointer group text-[var(--color-text-primary)]`}
             title="Refresh call records"
           >
             <svg
@@ -182,7 +182,7 @@ const CallLogFilters: React.FC<CallLogFiltersProps> = ({
         <div className="flex items-center">
           <label
             htmlFor="agent-select"
-            className="mr-2 text-sm font-medium text-gray-700"
+            className="mr-2 text-sm font-medium text-[var(--color-text-primary)]"
           >
             Agent:
           </label>
@@ -190,11 +190,11 @@ const CallLogFilters: React.FC<CallLogFiltersProps> = ({
             id="agent-select"
             value={selectedAgent}
             onChange={(e) => onAgentChange(e.target.value)}
-            className="px-3 py-1.5 text-sm border border-gray-300 rounded-full bg-neutral-200 text-gray-700 hover:border-gray-400 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 transition-colors duration-200 min-w-[150px]"
+            className="px-3 py-1.5 text-sm border border-gray-300/40 rounded-full bg-[var(--color-bg-secondary)] text-[var(--color-text-primary)] hover:border-gray-400 focus:outline-none focus:ring-2 focus:ring-[var(--color-text-primary)] focus:border-[var(--color-text-primary)] transition-colors duration-200 min-w-[150px]"
           >
-            <option value="">All Agents</option>
+            <option value="" className="bg-[var(--color-bg-secondary)]">All Agents</option>
             {agents.map((agent) => (
-              <option key={agent} value={agent}>
+              <option key={agent} value={agent} className="bg-[var(--color-bg-secondary)]">
                 {agent === "T10085496@tsagroup.com.au"
                   ? "mdunstan@tsagroup.com.au"
                   : agent === "T10085497@tsagroup.com.au"
@@ -222,7 +222,7 @@ const CallLogFilters: React.FC<CallLogFiltersProps> = ({
         <div className="flex items-center" ref={dispositionDropdownRef}>
           <label
             htmlFor="disposition-select"
-            className="mr-2 text-sm font-medium text-gray-700"
+            className="mr-2 text-sm font-medium text-[var(--color-text-primary)]"
           >
             Disposition:
           </label>
@@ -232,7 +232,7 @@ const CallLogFilters: React.FC<CallLogFiltersProps> = ({
               onClick={() =>
                 setIsDispositionDropdownOpen(!isDispositionDropdownOpen)
               }
-              className="px-3 py-1.5 text-sm border border-gray-300 rounded-full bg-neutral-200 text-gray-700 hover:border-gray-400 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 transition-colors duration-200 min-w-[200px] flex justify-between items-center"
+              className="px-3 py-1.5 text-sm border border-gray-300/20 rounded-full bg-[var(--color-bg-secondary)] text-[var(--color-text-primary)] hover:border-gray-400 focus:outline-none ocus:outline-none focus:ring-2 focus:ring-[var(--color-text-primary)] focus:border-[var(--color-text-primary)] transition-colors duration-200 min-w-[200px] flex justify-between items-center"
             >
               <span className="truncate">{getDispositionDisplayText()}</span>
               <svg
@@ -253,7 +253,7 @@ const CallLogFilters: React.FC<CallLogFiltersProps> = ({
             </button>
 
             {isDispositionDropdownOpen && (
-              <div className="absolute z-[100] mt-1 w-full bg-white border border-gray-300 rounded-md shadow-lg max-h-60 overflow-auto">
+              <div className="absolute z-[100] mt-1 w-full bg-[var(--color-bg-secondary)] border border-gray-300/20 rounded-md shadow-lg max-h-60 overflow-auto">
                 <div className="py-1">
                   {dispositions.map((disposition) => (
                     <label
@@ -264,9 +264,9 @@ const CallLogFilters: React.FC<CallLogFiltersProps> = ({
                         type="checkbox"
                         checked={selectedDispositions.includes(disposition)}
                         onChange={() => handleDispositionToggle(disposition)}
-                        className="mr-2 h-4 w-4 text-emerald-600 focus:ring-emerald-500 border-gray-300 rounded"
+                        className="mr-2 h-4 w-4 text-[var(--color-text-primary)] focus:ring-[var(--color-text-primary)] border-gray-300/20 rounded"
                       />
-                      <span className="text-sm text-gray-700">
+                      <span className="text-sm text-[var(--color-text-primary)]">
                         {disposition}
                       </span>
                     </label>
@@ -277,7 +277,7 @@ const CallLogFilters: React.FC<CallLogFiltersProps> = ({
                     <button
                       type="button"
                       onClick={() => onDispositionsChange([])}
-                      className="text-sm text-emerald-600 hover:text-emerald-800 font-medium"
+                      className="text-sm text-[var(--color-text-primary)] hover:text-[var(--color-text-primary)] font-medium"
                     >
                       Clear all
                     </button>
@@ -291,7 +291,7 @@ const CallLogFilters: React.FC<CallLogFiltersProps> = ({
             <button
               onClick={handleResetAllFilters}
               disabled={disabled}
-              className="px-3 py-1.5 text-sm font-medium rounded-md bg-emerald-800 text-white flex items-center gap-2 cursor-pointer"
+              className="px-3 py-1.5 text-sm font-medium rounded-md bg-[var(--color-bg-secondary)] text-[var(--color-text-primary)] flex items-center gap-2 cursor-pointer"
               title="Reset all filters"
             >
               <svg
@@ -316,13 +316,13 @@ const CallLogFilters: React.FC<CallLogFiltersProps> = ({
         <div className="ml-auto">
           {pathname === "/insights" ? (
             <Link href={"/"}>
-              <button className="px-3 py-1.5 text-sm border-none font-bold rounded-md bg-emerald-800 text-white min-w-[150px] cursor-pointer">
+              <button className="px-3 py-1.5 text-sm border-none font-bold rounded-md bg-[var(--color-bg-secondary)] text-[var(--color-text-primary)] min-w-[150px] cursor-pointer">
                 View Call Logs
               </button>
             </Link>
           ) : (
             <Link href={"/insights"}>
-              <button className="px-3 py-1.5 text-sm border-none font-bold rounded-md bg-emerald-800 text-white min-w-[150px] cursor-pointer">
+              <button className="px-3 py-1.5 text-sm border-none font-bold rounded-md bg-[var(--color-bg-secondary)] text-[var(--color-text-primary)] min-w-[150px] cursor-pointer">
                 View Insights
               </button>
             </Link>
@@ -339,9 +339,9 @@ const CallLogFilters: React.FC<CallLogFiltersProps> = ({
                 selectedFilter === option.value
               )} ${
                 index === 0
-                  ? "rounded-l-full rounded-r-md"
+                  ? "rounded-l-full rounded-r-md border border-[var(--color-bg-primary)]"
                   : index === filterOptions.length - 2
-                  ? "rounded-r-full rounded-l-md"
+                  ? "rounded-r-full rounded-l-md border border-[var(--color-bg-primary)]"
                   : index === filterOptions.length - 1
                   ? "ml-4"
                   : "rounded-none"
@@ -358,16 +358,16 @@ const CallLogFilters: React.FC<CallLogFiltersProps> = ({
                   type="date"
                   value={startDate || getDefaultStartDate()}
                   onChange={(e) => onStartDateChange(e.target.value)}
-                  className="px-2 py-1 text-sm border border-gray-300 rounded-md bg-white text-gray-700 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500"
+                  className="px-2 py-1 text-sm border border-gray-300/20 rounded-md bg-[var(--color-bg-secondary)] text-[var(--color-text-primary)] focus:outline-none ocus:outline-none focus:ring-2 focus:ring-[var(--color-text-primary)] focus:border-[var(--color-text-primary)]"
                 />
               </div>
               <div className="flex items-center gap-2">
-                <label className="text-sm font-bold text-emerald-800">-</label>
+                <label className="text-sm font-bold text-[var(--color-text-accent)]">-</label>
                 <input
                   type="date"
                   value={endDate || getTodayDate()}
                   onChange={(e) => onEndDateChange(e.target.value)}
-                  className="px-2 py-1 text-sm border border-gray-300 rounded-md bg-white text-gray-700 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500"
+                  className="px-2 py-1 text-sm border border-gray-300/20 rounded-md bg-[var(--color-bg-secondary)] text-[var(--color-text-primary)] focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500"
                 />
               </div>
             </div>

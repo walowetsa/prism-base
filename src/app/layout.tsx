@@ -26,7 +26,7 @@ export default function RootLayout({
         className={`${gilroy.variable} antialiased h-screen flex flex-col`}
       >
         <Header />
-        <div className="flex-1 bg-neutral-900 flex flex-col max-h-[calc(100vh-64px])]">
+        <div className="flex-1 bg-[var(--color-bg-primary)] flex flex-col max-h-[calc(100vh-64px])]">
           {children}
         </div>
       </body>

@@ -438,7 +438,7 @@ const CallLogTable: React.FC<CallLogTableProps> = ({ className }) => {
       </div>
 
       {/* body */}
-      <div className="flex-1 flex flex-col bg-neutral-800 shadow-sm rounded-lg border border-neutral-800 overflow-hidden">
+      <div className="flex-1 flex flex-col bg-[var(--color-bg-secondary)] shadow-sm rounded-lg border border-[var(--color-bg-secondary)] overflow-hidden">
         <div
           className="overflow-auto flex-1 flex flex-col  [&::-webkit-scrollbar]:w-2
   [&::-webkit-scrollbar-track]:rounded-full
@@ -449,13 +449,13 @@ const CallLogTable: React.FC<CallLogTableProps> = ({ className }) => {
   dark:[&::-webkit-scrollbar-thumb]:bg-neutral-500"
         >
           <table className="w-full table-fixed ">
-            <thead className="bg-black border-b border-neutral-800 sticky top-0 z-10">
+            <thead className="bg-[var(--color-bg-secondary)] border-b border-[var(--color-bg-secondary)] sticky top-0 z-10">
               <tr>
                 <th
                   className={`${getSortableHeaderClass("agent")} w-64`}
                   onClick={() => handleSort("agent")}
                 >
-                  <div className="flex items-center text-emerald-800">
+                  <div className="flex items-center text-[var(--color-text-primary)]">
                     Agent
                     <span className="text-lg">{getSortIcon("agent")}</span>
                   </div>
@@ -464,33 +464,33 @@ const CallLogTable: React.FC<CallLogTableProps> = ({ className }) => {
                   className={`${getSortableHeaderClass("timestamp")} w-64`}
                   onClick={() => handleSort("timestamp")}
                 >
-                  <div className="flex items-center text-emerald-800">
+                  <div className="flex items-center text-[var(--color-text-primary)]">
                     Timestamp
                     <span className="text-lg">{getSortIcon("timestamp")}</span>
                   </div>
                 </th>
-                <th className="px-4 py-3 text-left text-xs font-medium text-emerald-800 uppercase tracking-wider w-24">
+                <th className="px-4 py-3 text-left text-xs font-medium text-[var(--color-text-primary)] uppercase tracking-wider w-24">
                   Duration
                 </th>
                 <th
                   className={`${getSortableHeaderClass("disposition")} w-80`}
                   onClick={() => handleSort("disposition")}
                 >
-                  <div className="flex items-center text-emerald-800">
+                  <div className="flex items-center text-[var(--color-text-primary)]">
                     Disposition
                     <span className="text-lg">
                       {getSortIcon("disposition")}
                     </span>
                   </div>
                 </th>
-                <th className="px-4 py-3 text-center text-xs font-medium text-emerald-800 uppercase tracking-wider w-16"></th>
-                <th className="px-4 py-3 text-left text-xs font-medium text-emerald-800 uppercase tracking-wider">
+                <th className="px-4 py-3 text-center text-xs font-medium text-[var(--color-text-primary)] uppercase tracking-wider w-16"></th>
+                <th className="px-4 py-3 text-left text-xs font-medium text-[var(--color-text-primary)] uppercase tracking-wider">
                   Summary
                 </th>
-                <th className="px-4 py-3 text-left text-xs font-medium text-emerald-800 uppercase tracking-wider w-20"></th>
+                <th className="px-4 py-3 text-left text-xs font-medium text-[var(--color-text-primary)] uppercase tracking-wider w-20"></th>
               </tr>
             </thead>
-            <tbody className="bg-black divide-y divide-neutral-800">
+            <tbody className="bg-black divide-y divide-[var(--color-bg-secondary)]">
               {loading && callRecords.length > 0 && (
                 <tr>
                   <td colSpan={7} className="px-4 py-2 text-center text-gray-400">
@@ -501,23 +501,23 @@ const CallLogTable: React.FC<CallLogTableProps> = ({ className }) => {
               {callRecords.map((record) => (
                 <tr
                   key={record.contact_id}
-                  className="hover:bg-neutral-600 transition-colors"
+                  className="hover:bg-neutral-600/20 transition-colors"
                 >
-                  <td className="px-4 py-3 text-sm text-white w-64 truncate">
+                  <td className="px-4 py-3 text-sm text-[var(--color-text-accent)] w-64 truncate">
                     {
                       record.agent_username === 'T10085496@tsagroup.com.au' ? 'mdunstan@tsagroup.com.au' : record.agent_username === 'T10085497@tsagroup.com.au' ? 'mwilson.tsagroup.com.au' : record.agent_username === 'T10085494@tsagroup.com.au' ? 'vride.tsagroup.com.au' : record.agent_username === 'T10085498@tsagroup.com.au' ? 'bskipper.tsagroup.com.au' : record.agent_username === 'T10085495@tsagroup.com.au' ? 'ksingh@tsagroup.com.au' : record.agent_username === 'T10085499@tsagroup.com.au' ? 'elima@tsagroup.com.au' : record.agent_username === 'T10085523@tsagroup.com.au' ? 'srana@tsagroup.com.au' : record.agent_username === 'T10085526@tsagroup.com.au' ? 'ezgrajewski@tsagroup.com.au' : record.agent_username === 'T10085531@tsagroup.com.au' ? 'hcrooks.tsagroup.com.au' : record.agent_username
                     }
                   </td>
-                  <td className="px-4 py-3 text-sm text-white w-64">
+                  <td className="px-4 py-3 text-sm text-[var(--color-text-accent)] w-64">
                     {formatTimestamp(record.initiation_timestamp)}
                   </td>
-                  <td className="px-4 py-3 text-sm text-white w-24">
+                  <td className="px-4 py-3 text-sm text-[var(--color-text-accent)] w-24">
                     {formatCallDuration(record.call_duration)}
                   </td>
-                  <td className="px-4 py-3 text-sm text-white w-80 truncate">
+                  <td className="px-4 py-3 text-sm text-[var(--color-text-accent)] w-80 truncate">
                     {record.disposition_title || "N/A"}
                   </td>
-                  <td className="px-4 py-3 text-sm text-white w-16 text-center">
+                  <td className="px-4 py-3 text-sm text-[var(--color-text-accent)] w-16 text-center">
                     {isSuccessfulOutcome(record.disposition_title) && (
                       <span
                         className="text-green-400 text-lg"
@@ -527,7 +527,7 @@ const CallLogTable: React.FC<CallLogTableProps> = ({ className }) => {
                       </span>
                     )}
                   </td>
-                  <td className="px-4 py-3 text-sm text-white">
+                  <td className="px-4 py-3 text-sm text-[var(--color-text-accent)]">
                     <div
                       className="truncate"
                       title={record.call_summary || "N/A"}
@@ -535,13 +535,13 @@ const CallLogTable: React.FC<CallLogTableProps> = ({ className }) => {
                       {record.call_summary || "N/A"}
                     </div>
                   </td>
-                  <td className="px-4 py-3 text-sm text-white w-20 relative">
+                  <td className="px-4 py-3 text-sm text-[var(--color-text-accent)] w-20 relative">
                     <div
                       ref={openDropdownId === record.contact_id ? dropdownRef : null}
                     >
                       <button
                         onClick={() => handleEllipsisClick(record.contact_id)}
-                        className="text-white hover:text-gray-300 focus:outline-none focus:text-gray-300 p-1 rounded transition-colors"
+                        className="text-[var(--color-text-accent)] hover:text-gray-300 focus:outline-none focus:text-gray-300 p-1 rounded transition-colors"
                         aria-label="More actions"
                       >
                         ⋯

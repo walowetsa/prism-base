@@ -87,39 +87,42 @@ const CallLogPage = () => {
     }
   };
 
-const formatDuration = (
-  duration: string | { minutes?: number; seconds: number } | null
-): string => {
-  if (!duration) return "N/A";
-  try {
-    let parsedDuration: { minutes?: number; seconds: number };
-    if (typeof duration === "string") {
-      parsedDuration = JSON.parse(duration);
-    } else {
-      parsedDuration = duration;
-    }
-    const { seconds, minutes = 0 } = parsedDuration;
+  const formatDuration = (
+    duration: string | { minutes?: number; seconds: number } | null
+  ): string => {
+    if (!duration) return "N/A";
+    try {
+      let parsedDuration: { minutes?: number; seconds: number };
+      if (typeof duration === "string") {
+        parsedDuration = JSON.parse(duration);
+      } else {
+        parsedDuration = duration;
+      }
+      const { seconds, minutes = 0 } = parsedDuration;
 
-    // Validate numbers
-    if (typeof seconds !== "number" || seconds < 0) {
+      // Validate numbers
+      if (typeof seconds !== "number" || seconds < 0) {
+        return "N/A";
+      }
+
+      // Do minutes exist?
+      if (
+        minutes !== undefined &&
+        (typeof minutes !== "number" || minutes < 0)
+      ) {
+        return "N/A";
+      }
+
+      // Format
+      if (minutes === 0 || minutes === undefined) {
+        return `${seconds}s`;
+      }
+      return `${minutes}m ${seconds}s`;
+    } catch (error) {
+      console.error("Error parsing call duration:", error);
       return "N/A";
     }
-
-    // Do minutes exist?
-    if (minutes !== undefined && (typeof minutes !== "number" || minutes < 0)) {
-      return "N/A";
-    }
-
-    // Format
-    if (minutes === 0 || minutes === undefined) {
-      return `${seconds}s`;
-    }
-    return `${minutes}m ${seconds}s`;
-  } catch (error) {
-    console.error("Error parsing call duration:", error);
-    return "N/A";
-  }
-};
+  };
 
   // Helper Func - Sentiment
   // TODO: fix data type issues (15/07)
@@ -143,24 +146,26 @@ const formatDuration = (
     }
   };
 
-const calculateSentimentStats = (sentimentData: SentimentData[]) => {
+  const calculateSentimentStats = (sentimentData: SentimentData[]) => {
     if (sentimentData.length === 0) return null;
-    type ValidSentiment = 'positive' | 'negative' | 'neutral';
-    const isValidSentiment = (sentiment: string): sentiment is ValidSentiment => {
-      return ['positive', 'negative', 'neutral'].includes(sentiment);
+    type ValidSentiment = "positive" | "negative" | "neutral";
+    const isValidSentiment = (
+      sentiment: string
+    ): sentiment is ValidSentiment => {
+      return ["positive", "negative", "neutral"].includes(sentiment);
     };
 
     const stats = sentimentData.reduce(
       (acc, item) => {
         acc.total++;
-        
+
         const normalizedSentiment = item.sentiment.toLowerCase();
-        
+
         // Increment valid sentiments
         if (isValidSentiment(normalizedSentiment)) {
           acc[normalizedSentiment]++;
         }
-        
+
         acc.totalConfidence += item.confidence;
 
         if (!acc.speakers[item.speaker]) {
@@ -171,7 +176,7 @@ const calculateSentimentStats = (sentimentData: SentimentData[]) => {
             total: 0,
           };
         }
-        
+
         if (isValidSentiment(normalizedSentiment)) {
           acc.speakers[item.speaker][normalizedSentiment]++;
         }
@@ -291,13 +296,15 @@ const calculateSentimentStats = (sentimentData: SentimentData[]) => {
 
           <div className="grid grid-cols-3 gap-6">
             {/* Left Column - Call Details */}
-            <div className="space-y-6 max-h-[calc(100vh-240px)] overflow-y-scroll [&::-webkit-scrollbar]:w-2
+            <div
+              className="space-y-6 max-h-[calc(100vh-240px)] overflow-y-scroll [&::-webkit-scrollbar]:w-2
   [&::-webkit-scrollbar-track]:rounded-full
   [&::-webkit-scrollbar-track]:bg-gray-100
   [&::-webkit-scrollbar-thumb]:rounded-full
   [&::-webkit-scrollbar-thumb]:bg-gray-300
   dark:[&::-webkit-scrollbar-track]:bg-neutral-700
-  dark:[&::-webkit-scrollbar-thumb]:bg-neutral-500">
+  dark:[&::-webkit-scrollbar-thumb]:bg-neutral-500"
+            >
               {/* Call Overview */}
               <div className="bg-black rounded-lg shadow-sm p-6">
                 <h2 className="text-xl font-semibold text-emerald-800 mb-4">
@@ -568,30 +575,18 @@ const calculateSentimentStats = (sentimentData: SentimentData[]) => {
                     })()}
                   </div>
                 )}
-
-              {/* Entities */}
-              {/* {callRecord.entities && callRecord.entities.length > 0 && (
-                <div className="bg-black rounded-lg shadow-sm p-6">
-                  <h3 className="text-lg font-semibold text-emerald-800 mb-3">
-                    Extracted Entities
-                  </h3>
-                  <div className="space-y-2">
-                    <p className="text-neutral-200 text-sm">
-                      Entity data available - implementation pending
-                    </p>
-                  </div>
-                </div>
-              )} */}
             </div>
 
             {/* Middle Column - Transcript */}
-            <div className="bg-black rounded-lg shadow-sm p-6 max-h-[calc(100vh-240px)] overflow-y-scroll [&::-webkit-scrollbar]:w-2
+            <div
+              className="bg-black rounded-lg shadow-sm p-6 max-h-[calc(100vh-240px)] overflow-y-scroll [&::-webkit-scrollbar]:w-2
   [&::-webkit-scrollbar-track]:rounded-full
   [&::-webkit-scrollbar-track]:bg-gray-100
   [&::-webkit-scrollbar-thumb]:rounded-full
   [&::-webkit-scrollbar-thumb]:bg-gray-300
   dark:[&::-webkit-scrollbar-track]:bg-neutral-700
-  dark:[&::-webkit-scrollbar-thumb]:bg-neutral-500">
+  dark:[&::-webkit-scrollbar-thumb]:bg-neutral-500"
+            >
               <div className="flex items-center justify-between mb-4">
                 <h2 className="text-xl font-semibold text-emerald-800">
                   Transcript

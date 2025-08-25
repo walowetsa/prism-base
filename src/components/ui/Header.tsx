@@ -4,7 +4,7 @@ import Link from "next/link"
 
 const Header = () => {
   return (
-    <header className="w-screen px-4 bg-black">
+    <header className="w-screen px-4 bg-[var(--color-bg-secondary)]">
         <Link href={'/'}>
             <Image src={Logo} alt={"tsa-logo"} height={64}/>
         </Link>
