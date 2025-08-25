@@ -85,7 +85,7 @@ const CallLogFilters: React.FC<CallLogFiltersProps> = ({
       "px-3 py-1.5 text-sm font-medium rounded-md transition-colors duration-200";
 
     if (isSelected) {
-      return `${baseClass} bg-black/60 text-white shadow-sm`;
+      return `${baseClass} bg-black/60 text-[var(--color-text-primary)] shadow-sm`;
     }
 
     return `${baseClass} bg-[var(--color-bg-secondary)] text-[var(--color-text-primary)] border-gray-300 hover:bg-gray-50/20 `;
@@ -169,32 +169,35 @@ const CallLogFilters: React.FC<CallLogFiltersProps> = ({
               viewBox="0 0 24 24"
               xmlns="http://www.w3.org/2000/svg"
             >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth={2}
-                d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"
-              />
+    <defs>
+      <linearGradient id="refreshGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+        <stop offset="0%" stopColor="var(--color-prism-blue)" />
+        <stop offset="100%" stopColor="var(--color-prism-orange)" />
+      </linearGradient>
+    </defs>
+    <path
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      strokeWidth={2}
+      stroke="url(#refreshGradient)"
+      d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"
+    />
             </svg>
           </button>
         </div>
         {/* filter by agent */}
         <div className="flex items-center">
-          {/* <label
-            htmlFor="agent-select"
-            className="mr-2 text-sm font-medium text-[var(--color-text-primary)]"
-          >
-            Agent:
-          </label> */}
           <select
             id="agent-select"
             value={selectedAgent}
             onChange={(e) => onAgentChange(e.target.value)}
             className="px-3 py-1.5 text-sm border border-gray-300/20 rounded-full bg-[var(--color-bg-secondary)] text-[var(--color-text-primary)] hover:border-gray-400 focus:outline-none focus:ring-2 focus:ring-[var(--color-text-primary)] focus:border-[var(--color-text-primary)] transition-colors duration-200 min-w-[150px]"
           >
-            <option value="" className="bg-[var(--color-bg-secondary)]">All Agents</option>
+            <option value="" className="">
+              All Agents
+            </option>
             {agents.map((agent) => (
-              <option key={agent} value={agent} className="bg-[var(--color-bg-secondary)]">
+              <option key={agent} value={agent} className="">
                 {agent === "T10085496@tsagroup.com.au"
                   ? "mdunstan@tsagroup.com.au"
                   : agent === "T10085497@tsagroup.com.au"
@@ -220,19 +223,13 @@ const CallLogFilters: React.FC<CallLogFiltersProps> = ({
         </div>
 
         <div className="flex items-center" ref={dispositionDropdownRef}>
-          {/* <label
-            htmlFor="disposition-select"
-            className="mr-2 text-sm font-medium text-[var(--color-text-primary)]"
-          >
-            Disposition:
-          </label> */}
           <div className="relative">
             <button
               type="button"
               onClick={() =>
                 setIsDispositionDropdownOpen(!isDispositionDropdownOpen)
               }
-              className="px-3 py-1.5 text-sm border border-gray-300/20 rounded-full bg-[var(--color-bg-secondary)] text-[var(--color-text-primary)] hover:border-gray-400 focus:outline-none ocus:outline-none focus:ring-2 focus:ring-[var(--color-text-primary)] focus:border-[var(--color-text-primary)] transition-colors duration-200 min-w-[200px] flex justify-between items-center"
+              className="px-3 py-1.5 text-sm border border-gray-300/20 rounded-full bg-[var(--color-bg-secondary)] text-[var(--color-text-primary)] hover:border-gray-400 focus:outline-none focus:ring-2 focus:ring-[var(--color-text-primary)] focus:border-[var(--color-text-primary)] transition-colors duration-200 min-w-[200px] flex justify-between items-center"
             >
               <span className="truncate">{getDispositionDisplayText()}</span>
               <svg
@@ -258,7 +255,7 @@ const CallLogFilters: React.FC<CallLogFiltersProps> = ({
                   {dispositions.map((disposition) => (
                     <label
                       key={disposition}
-                      className="flex items-center px-3 py-2 hover:bg-gray-50 cursor-pointer"
+                      className="flex items-center px-3 py-2 hover:bg-black/60 cursor-pointer"
                     >
                       <input
                         type="checkbox"
@@ -316,14 +313,14 @@ const CallLogFilters: React.FC<CallLogFiltersProps> = ({
         <div className="ml-auto">
           {pathname === "/insights" ? (
             <Link href={"/"}>
-              <button className="px-3 py-1.5 text-sm border-none font-bold rounded-md bg-[var(--color-bg-secondary)] text-[var(--color-text-primary)] min-w-[150px] cursor-pointer">
-                View Call Logs
+              <button className="px-3 py-1.5 text-sm border-none rounded-md bg-[var(--color-bg-secondary)] text-[var(--color-text-primary)] min-w-[150px] cursor-pointer hover:bg-black/60 transition-colors">
+                <span className="bg-gradient-to-r from-[var(--color-prism-blue)] to-[var(--color-prism-orange)] bg-clip-text text-transparent">View Call Logs</span>
               </button>
             </Link>
           ) : (
             <Link href={"/insights"}>
-              <button className="px-3 py-1.5 text-sm border-none font-bold rounded-md bg-[var(--color-bg-secondary)] text-[var(--color-text-primary)] min-w-[150px] cursor-pointer">
-                View Insights
+              <button className="px-3 py-1.5 text-sm border-none rounded-md bg-[var(--color-bg-secondary)] text-[var(--color-text-primary)] min-w-[150px] cursor-pointer hover:bg-black/60 transition-colors">
+                <span className="bg-gradient-to-r from-[var(--color-prism-blue)] to-[var(--color-prism-orange)] bg-clip-text text-transparent">View Insights</span>
               </button>
             </Link>
           )}
