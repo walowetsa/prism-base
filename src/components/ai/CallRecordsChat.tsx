@@ -2,7 +2,7 @@
 "use client";
 
 import { useState, useRef, useEffect, useCallback } from "react";
-import { Send, AlertCircle, Loader2, Database, Clock } from "lucide-react";
+import { Send, AlertCircle, Loader2, Clock } from "lucide-react";
 import ReactMarkdown from "react-markdown";
 import CallRecord from "@/types/CallRecord";
 
