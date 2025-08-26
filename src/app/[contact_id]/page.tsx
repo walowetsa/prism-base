@@ -284,12 +284,12 @@ const CallLogPage = () => {
           <div className="mb-6">
             <button
               onClick={() => router.back()}
-              className="mb-4 px-4 py-2 text-sm text-[var(--color-text-primary)] hover:text-gray-800 transition-colors cursor-pointer"
+              className="mb-4 px-4 py-2 text-sm text-[var(--color-text-primary)] hover:text-black/60 transition-colors cursor-pointer"
             >
               ← Back to Call Logs
             </button>
             <h1 className="text-3xl font-bold text-[var(--color-text-primary)]">
-              Call Details
+              <span className="bg-gradient-to-r from-[var(--color-prism-blue)] to-[var(--color-prism-orange)] bg-clip-text text-transparent">Call Details</span>
             </h1>
             <p className="text-gray-600 mt-1">Contact ID: {contact_id}</p>
           </div>
@@ -308,7 +308,7 @@ const CallLogPage = () => {
               {/* Call Overview */}
               <div className="bg-black/60 rounded-lg shadow-sm p-6">
                 <h2 className="text-xl font-semibold text-[var(--color-text-primary)] mb-4">
-                  Overview
+              <span className="bg-gradient-to-r from-[var(--color-prism-blue)] to-[var(--color-prism-orange)] bg-clip-text text-transparent">Overview</span>
                 </h2>
                 <div className="grid grid-cols-1 gap-4">
                   <div>
@@ -366,7 +366,7 @@ const CallLogPage = () => {
               {callRecord.call_summary && (
                 <div className="bg-black/60 rounded-lg shadow-sm p-6">
                   <h2 className="text-xl font-semibold text-[var(--color-text-primary)] mb-4">
-                    Summary
+              <span className="bg-gradient-to-r from-[var(--color-prism-blue)] to-[var(--color-prism-orange)] bg-clip-text text-transparent">Summary</span>
                   </h2>
                   <p className="text-neutral-200 leading-relaxed text-sm">
                     {callRecord.call_summary}
@@ -377,7 +377,7 @@ const CallLogPage = () => {
               {/* Technical Details */}
               <div className="bg-black/60 rounded-lg shadow-sm p-6">
                 <h3 className="text-lg font-semibold text-[var(--color-text-primary)] mb-3">
-                  Technical Details
+              <span className="bg-gradient-to-r from-[var(--color-prism-blue)] to-[var(--color-prism-orange)] bg-clip-text text-transparent">Technicals</span>
                 </h3>
                 <div className="space-y-3 text-sm">
                   <div>
@@ -420,7 +420,7 @@ const CallLogPage = () => {
                 callRecord.sentiment_analysis.length > 0 && (
                   <div className="bg-black/60 rounded-lg shadow-sm p-6">
                     <h3 className="text-lg font-semibold text-[var(--color-text-primary)] mb-4">
-                      Sentiment Analysis
+              <span className="bg-gradient-to-r from-[var(--color-prism-blue)] to-[var(--color-prism-orange)] bg-clip-text text-transparent">Sentiment Analysis</span>
                     </h3>
 
                     {(() => {
@@ -589,7 +589,7 @@ const CallLogPage = () => {
             >
               <div className="flex items-center justify-between mb-4">
                 <h2 className="text-xl font-semibold text-[var(--color-text-primary)]">
-                  Transcript
+              <span className="bg-gradient-to-r from-[var(--color-prism-blue)] to-[var(--color-prism-orange)] bg-clip-text text-transparent">Transcript</span>
                 </h2>
               </div>
               <Transcript
@@ -601,7 +601,7 @@ const CallLogPage = () => {
             </div>
 
             {/* Right Column - Chat Interface */}
-            <div className="bg-black/60 rounded-lg shadow-sm p-0 flex flex-col max-h-[calc(100vh-240px)]">
+            <div className="rounded-lg shadow-sm p-0 flex flex-col max-h-[calc(100vh-240px)]">
               <CallDetailChat
                 callRecord={callRecord}
                 transcriptData={transcriptData}

@@ -247,15 +247,37 @@ const CallDetailChat: React.FC<CallDetailChatProps> = ({
   return (
     <div className="flex flex-col h-full rounded-lg shadow-sm">
       <div className="flex items-center gap-3 p-4 border-b bg-black/20 rounded-t-lg">
-        <div className="flex items-center justify-center w-8 h-8 bg-[var(--color-text-primary)] rounded-full">
-          <MessageSquare className="w-4 h-4 text-[var(--color-bg-primary)]" />
+        <div className="flex items-center justify-center w-8 h-8 bg-black/60 rounded-full">
+          <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none">
+            <defs>
+              <linearGradient
+                id="messageGradient"
+                x1="0%"
+                y1="0%"
+                x2="100%"
+                y2="100%"
+              >
+                <stop offset="0%" stopColor="var(--color-prism-blue)" />
+                <stop offset="100%" stopColor="var(--color-prism-orange)" />
+              </linearGradient>
+            </defs>
+            <path
+              d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"
+              stroke="url(#messageGradient)"
+              strokeWidth="2"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+            />
+          </svg>
         </div>
         <div>
           <h3 className="font-semibold text-[var(--color-text-primary)]">
-            PRISM - Call Analysis
+            <span className="bg-gradient-to-r from-[var(--color-prism-blue)] to-[var(--color-prism-orange)] bg-clip-text text-transparent">
+              PRISM - Call Analysis
+            </span>
           </h3>
           <p className="text-xs text-[var(--color-text-primary)] flex items-center gap-1">
-            <span className="w-2 h-2 bg-green-400 rounded-full"></span>
+            <span className="w-2 h-2 bg-gradient-to-r from-[var(--color-prism-blue)] to-[var(--color-prism-orange)] rounded-full"></span>
             {callRecord.agent_username || "Agent"} •{" "}
             {callRecord.queue_name || "Queue"}
           </p>
@@ -287,14 +309,14 @@ const CallDetailChat: React.FC<CallDetailChatProps> = ({
               <div
                 className={`rounded-lg px-3 py-2 text-xs bg-[var(--color-bg-primary)] ${
                   message.type === "user"
-                    ? "bg-emerald-800 text-white"
+                    ? "bg-[var(--color-prism-orange)] text-[var(--color-text-primary)]"
                     : message.error
                     ? "bg-red-50 text-red-900 border border-red-200"
-                    : "bg-gray-100 text-gray-900"
+                    : "bg-[var(--color-prism-blue)] text-[var(--color-text-primary)]"
                 }`}
               >
                 {message.type === "assistant" && !message.error ? (
-                  <div className="prose prose-sm max-w-none text-xs ">
+                  <div className="prose prose-sm max-w-none text-xs">
                     <ReactMarkdown components={MarkdownComponents}>
                       {message.content}
                     </ReactMarkdown>
@@ -320,7 +342,9 @@ const CallDetailChat: React.FC<CallDetailChatProps> = ({
           <div className="flex gap-3 justify-start">
             <div className="bg-gray-100 rounded-lg px-3 py-2">
               <div className="flex items-center gap-1">
-                <div className="text-xs text-[var(--color-text-accent)] mr-2">Thinking</div>
+                <div className="text-xs text-[var(--color-text-accent)] mr-2">
+                  Thinking
+                </div>
                 <div className="w-2 h-2 bg-[var(--color-bg-primary)] rounded-full animate-bounce"></div>
                 <div
                   className="w-2 h-2 bg-[var(--color-bg-primary)] rounded-full animate-bounce"
@@ -374,21 +398,6 @@ const CallDetailChat: React.FC<CallDetailChatProps> = ({
                 {prompt}
               </button>
             ))}
-          </div>
-        )}
-
-        {callRecord && (
-          <div className="text-xs text-gray-500 mt-2 flex items-center justify-between">
-            <span>
-              Analysing call {callRecord.id} •
-              {transcriptData.length > 0
-                ? ` ${transcriptData.length} transcript segments`
-                : " No transcript"}{" "}
-              •
-              {callRecord.sentiment_analysis?.length
-                ? " Has sentiment data"
-                : " No sentiment data"}
-            </span>
           </div>
         )}
       </div>

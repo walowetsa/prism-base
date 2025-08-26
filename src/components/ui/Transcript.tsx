@@ -27,8 +27,8 @@ const Transcript: React.FC<TranscriptProps> = ({
 
   const getSpeakerStyling = (speakerRole: string) => {
     return speakerRole === 'Agent' 
-      ? 'bg-[var(--color-bg-secondary)] border-l-4 border-emerald-800' 
-      : 'bg-[var(--color-bg-secondary)] border-r-4 border-blue-500';
+      ? 'bg-[var(--color-bg-secondary)] border-l-4 border-[var(--color-prism-blue)]' 
+      : 'bg-[var(--color-bg-secondary)] border-r-4 border-[var(--color-prism-orange)]';
   };
 
   if (!data || data.length === 0) {
