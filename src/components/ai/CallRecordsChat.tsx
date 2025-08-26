@@ -637,14 +637,6 @@ const CallRecordsChat: React.FC<CallRecordsChatProps> = ({
                 ? "Loading data..."
                 : `${filteredRecords.length.toLocaleString()} records`}
             </span>
-            {/* {hasFullDispositionData && (
-              <span className="flex items-center gap-2 text-emerald-300">
-                <Database className="w-4 h-4" />
-                <span className="text-xs">
-                  Full disposition data available ({allRecords?.length.toLocaleString()} total)
-                </span>
-              </span>
-            )} */}
           </div>
         </div>
         {retryCount > 0 && (

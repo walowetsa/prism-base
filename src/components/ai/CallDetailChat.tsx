@@ -3,7 +3,7 @@
 "use client";
 
 import { useState, useRef, useEffect } from "react";
-import { Send, MessageSquare, AlertCircle } from "lucide-react";
+import { Send, AlertCircle } from "lucide-react";
 import ReactMarkdown from "react-markdown";
 import CallRecord from "@/types/CallRecord";
 import { TranscriptSegment } from "@/types/Transcription";
