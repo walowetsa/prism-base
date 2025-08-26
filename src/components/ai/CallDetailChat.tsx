@@ -284,9 +284,15 @@ const CallDetailChat: React.FC<CallDetailChatProps> = ({
         </div>
       </div>
 
-      <div className="flex-1 overflow-y-auto p-4 space-y-4  bg-black/60">
+      <div className="flex-1 overflow-y-auto p-4 space-y-4 bg-black/60 [&::-webkit-scrollbar]:w-2
+  [&::-webkit-scrollbar-track]:rounded-full
+  [&::-webkit-scrollbar-track]:bg-gray-100
+  [&::-webkit-scrollbar-thumb]:rounded-full
+  [&::-webkit-scrollbar-thumb]:bg-gray-300
+  dark:[&::-webkit-scrollbar-track]:bg-neutral-700
+  dark:[&::-webkit-scrollbar-thumb]:bg-neutral-500">
         {!callRecord && (
-          <div className="flex items-center gap-3 p-4 bg-amber-50 border border-amber-200 rounded-lg">
+          <div className="flex items-center gap-3 p-4 bg-amber-50 border border-amber-200 rounded-lg ">
             <AlertCircle className="w-5 h-5 text-amber-600" />
             <div className="text-sm text-amber-800">
               No call record available for analysis.
@@ -307,7 +313,7 @@ const CallDetailChat: React.FC<CallDetailChatProps> = ({
               }`}
             >
               <div
-                className={`rounded-lg px-3 py-2 text-xs bg-[var(--color-bg-primary)] ${
+                className={`rounded-lg px-3 py-2 text-xs bg-[var(--color-bg-primary)]  ${
                   message.type === "user"
                     ? "bg-[var(--color-prism-orange)] text-[var(--color-text-primary)]"
                     : message.error
@@ -316,7 +322,7 @@ const CallDetailChat: React.FC<CallDetailChatProps> = ({
                 }`}
               >
                 {message.type === "assistant" && !message.error ? (
-                  <div className="prose prose-sm max-w-none text-xs">
+                  <div className="prose prose-sm max-w-none text-xs ">
                     <ReactMarkdown components={MarkdownComponents}>
                       {message.content}
                     </ReactMarkdown>
@@ -328,7 +334,7 @@ const CallDetailChat: React.FC<CallDetailChatProps> = ({
                 )}
               </div>
               <div
-                className={`text-xs text-gray-500 mt-1 ${
+                className={`text-xs text-gray-500 mt-1  ${
                   message.type === "user" ? "text-right" : "text-left"
                 }`}
               >
