@@ -303,13 +303,7 @@ const CallLogFilters: React.FC<CallLogFiltersProps> = ({
             onClick={() =>
               setIsDispositionDropdownOpen(!isDispositionDropdownOpen)
             }
-            className="px-3 py-1.5 text-sm border border-gray-300/20 rounded-full bg-[var(--color-bg-secondary)] text-[var(--color-text-primary)] hover:border-gray-400 focus:outline-none focus:ring-2 focus:ring-[var(--color-text-primary)] focus:border-[var(--color-text-primary)] transition-colors duration-200 min-w-[160px] flex justify-between items-center  [&::-webkit-scrollbar]:w-2
-  [&::-webkit-scrollbar-track]:rounded-full
-  [&::-webkit-scrollbar-track]:bg-gray-100
-  [&::-webkit-scrollbar-thumb]:rounded-full
-  [&::-webkit-scrollbar-thumb]:bg-gray-300
-  dark:[&::-webkit-scrollbar-track]:bg-neutral-700
-  dark:[&::-webkit-scrollbar-thumb]:bg-neutral-500"
+            className="px-3 py-1.5 text-sm border border-gray-300/20 rounded-full bg-[var(--color-bg-secondary)] text-[var(--color-text-primary)] hover:border-gray-400 focus:outline-none focus:ring-2 focus:ring-[var(--color-text-primary)] focus:border-[var(--color-text-primary)] transition-colors duration-200 min-w-[160px] flex justify-between items-center"
           >
             <span className="truncate">{getDispositionDisplayText()}</span>
             <svg
@@ -330,7 +324,13 @@ const CallLogFilters: React.FC<CallLogFiltersProps> = ({
           </button>
 
           {isDispositionDropdownOpen && (
-            <div className="absolute z-[100] mt-1 w-full bg-[var(--color-bg-secondary)] border border-gray-300/20 rounded-md shadow-lg max-h-60 min-w-[320px] overflow-auto">
+            <div className="absolute z-[100] mt-1 w-full bg-[var(--color-bg-secondary)] border border-gray-300/20 rounded-md shadow-lg max-h-60 min-w-[320px] overflow-auto  [&::-webkit-scrollbar]:w-2
+  [&::-webkit-scrollbar-track]:rounded-full
+  [&::-webkit-scrollbar-track]:bg-gray-100
+  [&::-webkit-scrollbar-thumb]:rounded-full
+  [&::-webkit-scrollbar-thumb]:bg-gray-300
+  dark:[&::-webkit-scrollbar-track]:bg-neutral-700
+  dark:[&::-webkit-scrollbar-thumb]:bg-neutral-500">
               <div className="py-1">
                 {dispositions.map((disposition) => (
                   <label
