@@ -428,9 +428,6 @@ const CallLogTable: React.FC<CallLogTableProps> = ({ className }) => {
             disabled={loading || filtersLoading}
           />
         </div>
-        <div className="text-sm text-gray-600">
-          {loading ? "Loading..." : `${pagination.total} total records`}
-        </div>
       </div>
 
       {/* body */}

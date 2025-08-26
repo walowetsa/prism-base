@@ -192,7 +192,7 @@ const InsightsPage = () => {
   return (
     <div className="flex-1 flex flex-col p-4 ">
       <div className="mb-4 flex flex-col gap-4">
-        <div className="flex justify-center">
+        <div className="flex">
           <CallLogFilters
             selectedFilter={filterPeriod}
             onFilterChange={handleFilterChange}
@@ -212,15 +212,15 @@ const InsightsPage = () => {
         </div>
       </div>
 
-      <div className="flex gap-x-4 max-h-[calc(100vh-160px)]">
-        <div className="flex-1 max-h-[calc(100vh-160px)]">
+      <div className="flex gap-x-4">
+        <div className="flex-1">
           <InsightsStatsDashboard
             filteredRecords={callRecords}
             totalRecords={allRecordsCount}
             loading={loading}
           />
         </div>
-        <div className="w-[30vw] min-w-[360px] max-w-[640px] max-h-[calc(100vh-220px)]">
+        <div className="w-[30vw] min-w-[360px] max-w-[640px]">
           <CallRecordsChat
             filteredRecords={callRecords}
             totalRecords={allRecordsCount}

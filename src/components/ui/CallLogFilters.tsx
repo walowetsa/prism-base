@@ -1,8 +1,6 @@
 "use client";
 
-// import Link from "next/link";
 import { useMemo, useState, useRef, useEffect } from "react";
-// import { usePathname } from "next/navigation";
 
 export type FilterPeriod =
   | "all"
@@ -48,8 +46,7 @@ const CallLogFilters: React.FC<CallLogFiltersProps> = ({
   className,
 }) => {
   const [isRefreshing, setIsRefreshing] = useState(false);
-  const [isDispositionDropdownOpen, setIsDispositionDropdownOpen] =
-    useState(false);
+  const [isDispositionDropdownOpen, setIsDispositionDropdownOpen] = useState(false);
   const dispositionDropdownRef = useRef<HTMLDivElement>(null);
 
   const filterOptions = useMemo(
@@ -57,9 +54,9 @@ const CallLogFilters: React.FC<CallLogFiltersProps> = ({
       { value: "all" as FilterPeriod, label: "All" },
       { value: "today" as FilterPeriod, label: "Today" },
       { value: "yesterday" as FilterPeriod, label: "Yesterday" },
-      { value: "last7days" as FilterPeriod, label: "Last 7 Days" },
+      { value: "last7days" as FilterPeriod, label: "Last 7D" },
       { value: "lastMonth" as FilterPeriod, label: "Last Month" },
-      { value: "dateRange" as FilterPeriod, label: "Date Range" },
+      { value: "dateRange" as FilterPeriod, label: "Custom" },
     ],
     []
   );
@@ -79,17 +76,6 @@ const CallLogFilters: React.FC<CallLogFiltersProps> = ({
       document.removeEventListener("mousedown", handleClickOutside);
     };
   }, []);
-
-  const getButtonClass = (isSelected: boolean) => {
-    const baseClass =
-      "px-3 py-1.5 text-sm font-medium rounded-md transition-colors duration-200";
-
-    if (isSelected) {
-      return `${baseClass} bg-black/60 text-[var(--color-text-primary)] shadow-sm`;
-    }
-
-    return `${baseClass} bg-[var(--color-bg-secondary)] text-[var(--color-text-primary)] border-gray-300 hover:bg-gray-50/20 `;
-  };
 
   const formatDateForInput = (date: Date): string => {
     return date.toISOString().split("T")[0];
@@ -147,240 +133,206 @@ const CallLogFilters: React.FC<CallLogFiltersProps> = ({
     }
   };
 
-
   return (
-    <div className={`flex gap-4 ${className} flex-col w-full`}>
-      <div className="flex gap-x-4">
+    <div className={`${className}`}>
+      <div className="flex items-center gap-3 flex-wrap">
         {/* Refresh button */}
-        <div className="flex items-center">
-          <button
-            onClick={handleRefresh}
-            disabled={disabled || isRefreshing}
-            className={`bg-[var(--color-bg-secondary)] w-8 h-8 rounded-full flex items-center justify-center cursor-pointer group text-[var(--color-text-primary)]`}
-            title="Refresh call records"
+        <button
+          onClick={handleRefresh}
+          disabled={disabled || isRefreshing}
+          className={`bg-[var(--color-bg-secondary)] w-8 h-8 rounded-full flex items-center justify-center cursor-pointer group text-[var(--color-text-primary)] shrink-0`}
+          title="Refresh call records"
+        >
+          <svg
+            className={`w-4 h-4 group-hover:rotate-90 transition-all ${
+              isRefreshing ? "animate-spin" : ""
+            }`}
+            fill="none"
+            stroke="currentColor"
+            viewBox="0 0 24 24"
+            xmlns="http://www.w3.org/2000/svg"
           >
+            <defs>
+              <linearGradient
+                id="refreshGradient"
+                x1="0%"
+                y1="0%"
+                x2="100%"
+                y2="100%"
+              >
+                <stop offset="0%" stopColor="var(--color-prism-blue)" />
+                <stop offset="100%" stopColor="var(--color-prism-orange)" />
+              </linearGradient>
+            </defs>
+            <path
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              strokeWidth={2}
+              stroke="url(#refreshGradient)"
+              d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"
+            />
+          </svg>
+        </button>
+
+        {/* Agent Filter */}
+        <select
+          id="agent-select"
+          value={selectedAgent}
+          onChange={(e) => onAgentChange(e.target.value)}
+          className="px-3 py-1.5 text-sm border border-gray-300/20 rounded-full bg-[var(--color-bg-secondary)] text-[var(--color-text-primary)] hover:border-gray-400 focus:outline-none focus:ring-2 focus:ring-[var(--color-text-primary)] focus:border-[var(--color-text-primary)] transition-colors duration-200 min-w-[140px]"
+        >
+          <option value="">All Agents</option>
+          {agents.map((agent) => (
+            <option key={agent} value={agent}>
+              {agent === "T10085496@tsagroup.com.au"
+                ? "mdunstan@tsagroup.com.au"
+                : agent === "T10085497@tsagroup.com.au"
+                ? "mwilson.tsagroup.com.au"
+                : agent === "T10085494@tsagroup.com.au"
+                ? "vride.tsagroup.com.au"
+                : agent === "T10085498@tsagroup.com.au"
+                ? "bskipper.tsagroup.com.au"
+                : agent === "T10085495@tsagroup.com.au"
+                ? "ksingh@tsagroup.com.au"
+                : agent === "T10085499@tsagroup.com.au"
+                ? "elima@tsagroup.com.au"
+                : agent === "T10085523@tsagroup.com.au"
+                ? "srana@tsagroup.com.au"
+                : agent === "T10085526@tsagroup.com.au"
+                ? "ezgrajewski@tsagroup.com.au"
+                : agent === "T10085531@tsagroup.com.au"
+                ? "hcrooks.tsagroup.com.au"
+                : agent}
+            </option>
+          ))}
+        </select>
+
+        {/* Disposition Filter */}
+        <div className="relative" ref={dispositionDropdownRef}>
+          <button
+            type="button"
+            onClick={() =>
+              setIsDispositionDropdownOpen(!isDispositionDropdownOpen)
+            }
+            className="px-3 py-1.5 text-sm border border-gray-300/20 rounded-full bg-[var(--color-bg-secondary)] text-[var(--color-text-primary)] hover:border-gray-400 focus:outline-none focus:ring-2 focus:ring-[var(--color-text-primary)] focus:border-[var(--color-text-primary)] transition-colors duration-200 min-w-[160px] flex justify-between items-center"
+          >
+            <span className="truncate">{getDispositionDisplayText()}</span>
             <svg
-              className={`w-4 h-4 group-hover:rotate-90 transition-all ${
-                isRefreshing ? "animate-spin" : ""
+              className={`w-4 h-4 transition-transform ml-2 shrink-0 ${
+                isDispositionDropdownOpen ? "rotate-180" : ""
               }`}
               fill="none"
               stroke="currentColor"
               viewBox="0 0 24 24"
-              xmlns="http://www.w3.org/2000/svg"
             >
-              <defs>
-                <linearGradient
-                  id="refreshGradient"
-                  x1="0%"
-                  y1="0%"
-                  x2="100%"
-                  y2="100%"
-                >
-                  <stop offset="0%" stopColor="var(--color-prism-blue)" />
-                  <stop offset="100%" stopColor="var(--color-prism-orange)" />
-                </linearGradient>
-              </defs>
               <path
                 strokeLinecap="round"
                 strokeLinejoin="round"
                 strokeWidth={2}
-                stroke="url(#refreshGradient)"
-                d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"
+                d="M19 9l-7 7-7-7"
               />
             </svg>
           </button>
-        </div>
-        {/* filter by agent */}
-        <div className="flex items-center">
-          <select
-            id="agent-select"
-            value={selectedAgent}
-            onChange={(e) => onAgentChange(e.target.value)}
-            className="px-3 py-1.5 text-sm border border-gray-300/20 rounded-full bg-[var(--color-bg-secondary)] text-[var(--color-text-primary)] hover:border-gray-400 focus:outline-none focus:ring-2 focus:ring-[var(--color-text-primary)] focus:border-[var(--color-text-primary)] transition-colors duration-200 min-w-[150px]"
-          >
-            <option value="" className="">
-              All Agents
-            </option>
-            {agents.map((agent) => (
-              <option key={agent} value={agent} className="">
-                {agent === "T10085496@tsagroup.com.au"
-                  ? "mdunstan@tsagroup.com.au"
-                  : agent === "T10085497@tsagroup.com.au"
-                  ? "mwilson.tsagroup.com.au"
-                  : agent === "T10085494@tsagroup.com.au"
-                  ? "vride.tsagroup.com.au"
-                  : agent === "T10085498@tsagroup.com.au"
-                  ? "bskipper.tsagroup.com.au"
-                  : agent === "T10085495@tsagroup.com.au"
-                  ? "ksingh@tsagroup.com.au"
-                  : agent === "T10085499@tsagroup.com.au"
-                  ? "elima@tsagroup.com.au"
-                  : agent === "T10085523@tsagroup.com.au"
-                  ? "srana@tsagroup.com.au"
-                  : agent === "T10085526@tsagroup.com.au"
-                  ? "ezgrajewski@tsagroup.com.au"
-                  : agent === "T10085531@tsagroup.com.au"
-                  ? "hcrooks.tsagroup.com.au"
-                  : agent}
-              </option>
-            ))}
-          </select>
-        </div>
 
-        <div className="flex items-center" ref={dispositionDropdownRef}>
-          <div className="relative">
-            <button
-              type="button"
-              onClick={() =>
-                setIsDispositionDropdownOpen(!isDispositionDropdownOpen)
-              }
-              className="px-3 py-1.5 text-sm border border-gray-300/20 rounded-full bg-[var(--color-bg-secondary)] text-[var(--color-text-primary)] hover:border-gray-400 focus:outline-none focus:ring-2 focus:ring-[var(--color-text-primary)] focus:border-[var(--color-text-primary)] transition-colors duration-200 min-w-[200px] flex justify-between items-center"
-            >
-              <span className="truncate">{getDispositionDisplayText()}</span>
-              <svg
-                className={`w-4 h-4 transition-transform ${
-                  isDispositionDropdownOpen ? "rotate-180" : ""
-                }`}
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={2}
-                  d="M19 9l-7 7-7-7"
-                />
-              </svg>
-            </button>
-
-            {isDispositionDropdownOpen && (
-              <div className="absolute z-[100] mt-1 w-full bg-[var(--color-bg-secondary)] border border-gray-300/20 rounded-md shadow-lg max-h-60 overflow-auto">
-                <div className="py-1">
-                  {dispositions.map((disposition) => (
-                    <label
-                      key={disposition}
-                      className="flex items-center px-3 py-2 hover:bg-black/60 cursor-pointer"
-                    >
-                      <input
-                        type="checkbox"
-                        checked={selectedDispositions.includes(disposition)}
-                        onChange={() => handleDispositionToggle(disposition)}
-                        className="mr-2 h-4 w-4 text-[var(--color-text-primary)] focus:ring-[var(--color-text-primary)] border-gray-300/20 rounded"
-                      />
-                      <span className="text-sm text-[var(--color-text-primary)]">
-                        {disposition}
-                      </span>
-                    </label>
-                  ))}
-                </div>
-                {selectedDispositions.length > 0 && (
-                  <div className="border-t border-gray-200 px-3 py-2">
-                    <button
-                      type="button"
-                      onClick={() => onDispositionsChange([])}
-                      className="text-sm text-[var(--color-text-primary)] hover:text-[var(--color-text-primary)] font-medium"
-                    >
-                      Clear all
-                    </button>
-                  </div>
-                )}
+          {isDispositionDropdownOpen && (
+            <div className="absolute z-[100] mt-1 w-full bg-[var(--color-bg-secondary)] border border-gray-300/20 rounded-md shadow-lg max-h-60 overflow-auto">
+              <div className="py-1">
+                {dispositions.map((disposition) => (
+                  <label
+                    key={disposition}
+                    className="flex items-center px-3 py-2 hover:bg-black/60 cursor-pointer"
+                  >
+                    <input
+                      type="checkbox"
+                      checked={selectedDispositions.includes(disposition)}
+                      onChange={() => handleDispositionToggle(disposition)}
+                      className="mr-2 h-4 w-4 text-[var(--color-text-primary)] focus:ring-[var(--color-text-primary)] border-gray-300/20 rounded"
+                    />
+                    <span className="text-sm text-[var(--color-text-primary)]">
+                      {disposition}
+                    </span>
+                  </label>
+                ))}
               </div>
-            )}
-          </div>
-
-          <div className="flex items-center ml-12">
-            <button
-              onClick={handleResetAllFilters}
-              disabled={disabled}
-              className="px-3 py-1.5 text-sm font-medium rounded-md bg-[var(--color-bg-secondary)] text-[var(--color-text-primary)] flex items-center gap-2 cursor-pointer"
-              title="Reset all filters"
-            >
-              <svg
-                className="w-4 h-4"
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
-                xmlns="http://www.w3.org/2000/svg"
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={2}
-                  d="M6 18L18 6M6 6l12 12"
-                />
-              </svg>
-              Reset Filters
-            </button>
-          </div>
-        </div>
-{/* 
-        <div className="ml-auto">
-          {pathname === "/insights" ? (
-            <Link href={"/"}>
-              <button className="px-3 py-1.5 text-sm border-none rounded-md bg-[var(--color-bg-secondary)] text-[var(--color-text-primary)] min-w-[150px] cursor-pointer hover:bg-black/60 transition-colors">
-                <span className="bg-gradient-to-r from-[var(--color-prism-blue)] to-[var(--color-prism-orange)] bg-clip-text text-transparent">
-                  View Call Logs
-                </span>
-              </button>
-            </Link>
-          ) : (
-            <Link href={"/insights"}>
-              <button className="px-3 py-1.5 text-sm border-none rounded-md bg-[var(--color-bg-secondary)] text-[var(--color-text-primary)] min-w-[150px] cursor-pointer hover:bg-black/60 transition-colors">
-                <span className="bg-gradient-to-r from-[var(--color-prism-blue)] to-[var(--color-prism-orange)] bg-clip-text text-transparent">
-                  View Insights
-                </span>
-              </button>
-            </Link>
+              {selectedDispositions.length > 0 && (
+                <div className="border-t border-gray-200 px-3 py-2">
+                  <button
+                    type="button"
+                    onClick={() => onDispositionsChange([])}
+                    className="text-sm text-[var(--color-text-primary)] hover:text-[var(--color-text-primary)] font-medium"
+                  >
+                    Clear all
+                  </button>
+                </div>
+              )}
+            </div>
           )}
-        </div> */}
-      </div>
-      <div className="flex flex-col">
-        <div className="flex items-center space-x-1 p-1 rounded-full">
+        </div>
+
+        {/* Date Filters */}
+        <div className="flex items-center bg-[var(--color-bg-secondary)] rounded-full p-1 border border-gray-300/20">
           {filterOptions.map((option, index) => (
             <button
               key={option.value}
               onClick={() => onFilterChange(option.value)}
-              className={`w-32 ${getButtonClass(
+              className={`px-3 py-1 text-xs font-medium transition-colors duration-200 ${
                 selectedFilter === option.value
-              )} ${
+                  ? "bg-black/60 text-[var(--color-text-primary)] shadow-sm"
+                  : "text-[var(--color-text-primary)] hover:bg-gray-50/20"
+              } ${
                 index === 0
-                  ? "rounded-l-full rounded-r-md bg-[var(--color-bg-secondary)] border-[var(--color-bg-primary)]"
-                  : index === filterOptions.length - 2
-                  ? "rounded-r-full rounded-l-md bg-[var(--color-bg-secondary)] border-[var(--color-bg-primary)]"
+                  ? "rounded-l-full"
                   : index === filterOptions.length - 1
-                  ? "ml-4"
-                  : "rounded-none bg-[var(--color-bg-secondary)]"
+                  ? "rounded-r-full"
+                  : "rounded"
               }`}
             >
               {option.label}
             </button>
           ))}
-
-          {selectedFilter === "dateRange" && (
-            <div className="ml-8 flex items-center gap-2 p-2 rounded-lg">
-              <div className="flex items-center gap-2">
-                <input
-                  type="date"
-                  value={startDate || getDefaultStartDate()}
-                  onChange={(e) => onStartDateChange(e.target.value)}
-                  className="px-2 py-1 text-sm border border-gray-300/20 rounded-md bg-[var(--color-bg-secondary)] text-[var(--color-text-primary)] focus:outline-none ocus:outline-none focus:ring-2 focus:ring-[var(--color-text-primary)] focus:border-[var(--color-text-primary)]"
-                />
-              </div>
-              <div className="flex items-center gap-2">
-                <label className="text-sm font-bold text-[var(--color-text-accent)]">
-                  -
-                </label>
-                <input
-                  type="date"
-                  value={endDate || getTodayDate()}
-                  onChange={(e) => onEndDateChange(e.target.value)}
-                  className="px-2 py-1 text-sm border border-gray-300/20 rounded-md bg-[var(--color-bg-secondary)] text-[var(--color-text-primary)] focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500"
-                />
-              </div>
-            </div>
-          )}
         </div>
+
+        {selectedFilter === "dateRange" && (
+          <div className="flex items-center gap-2">
+            <input
+              type="date"
+              value={startDate || getDefaultStartDate()}
+              onChange={(e) => onStartDateChange(e.target.value)}
+              className="px-2 py-1 text-xs border border-gray-300/20 rounded-md bg-[var(--color-bg-secondary)] text-[var(--color-text-primary)] focus:outline-none focus:ring-2 focus:ring-[var(--color-text-primary)] focus:border-[var(--color-text-primary)]"
+            />
+            <span className="text-xs font-bold text-[var(--color-text-accent)]">to</span>
+            <input
+              type="date"
+              value={endDate || getTodayDate()}
+              onChange={(e) => onEndDateChange(e.target.value)}
+              className="px-2 py-1 text-xs border border-gray-300/20 rounded-md bg-[var(--color-bg-secondary)] text-[var(--color-text-primary)] focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500"
+            />
+          </div>
+        )}
+
+        {/* Reset Filters Button */}
+        <button
+          onClick={handleResetAllFilters}
+          disabled={disabled}
+          className="px-3 py-1.5 text-sm font-medium rounded-md bg-[var(--color-bg-secondary)] text-[var(--color-text-primary)] flex items-center gap-2 cursor-pointer border border-gray-300/20 hover:bg-gray-50/20 shrink-0"
+          title="Reset all filters"
+        >
+          <svg
+            className="w-4 h-4"
+            fill="none"
+            stroke="currentColor"
+            viewBox="0 0 24 24"
+            xmlns="http://www.w3.org/2000/svg"
+          >
+            <path
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              strokeWidth={2}
+              d="M6 18L18 6M6 6l12 12"
+            />
+          </svg>
+          Reset
+        </button>
       </div>
     </div>
   );
