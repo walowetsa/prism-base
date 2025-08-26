@@ -12,6 +12,8 @@ import {
   Cell,
 } from "recharts";
 import CallRecord from "@/types/CallRecord";
+import Image from "next/image";
+import Loader from '../../../public/prism-loader.gif'
 
 interface InsightsStatsDashboardProps {
   filteredRecords: CallRecord[];
@@ -180,8 +182,9 @@ const InsightsStatsDashboard: React.FC<InsightsStatsDashboardProps> = ({
 
   if (loading) {
     return (
-      <div className="flex-1 flex items-center justify-center p-8">
+      <div className="flex-1 flex flex-col items-center justify-center p-8">
         <div className="text-gray-600">Loading insights...</div>
+                <Image src={Loader} alt={"loading-icon"} width={480} height={480}/>
       </div>
     );
   }

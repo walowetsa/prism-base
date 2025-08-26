@@ -4,6 +4,8 @@ import { useState, useEffect, useRef, useCallback } from "react";
 import CallRecord from "@/types/CallRecord";
 import CallLogFilters, { FilterPeriod } from "./CallLogFilters";
 import Link from "next/link";
+import Loader from "../../../public/prism-loader.gif";
+import Image from "next/image";
 
 interface CallLogTableProps {
   className?: string;
@@ -381,8 +383,9 @@ const CallLogTable: React.FC<CallLogTableProps> = ({ className }) => {
 
   if (loading && callRecords.length === 0) {
     return (
-      <div className={`flex items-center justify-center p-8 ${className}`}>
+      <div className={`flex flex-col items-center justify-center p-8 ${className}`}>
         <div className="text-gray-600">Loading call records...</div>
+        <Image src={Loader} alt={"loading-icon"} width={480} height={480}/>
       </div>
     );
   }

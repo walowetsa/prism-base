@@ -7,6 +7,8 @@ import Transcript from "@/components/ui/Transcript";
 import { TranscriptSegment } from "@/types/Transcription";
 import CallDetailChat from "@/components/ai/CallDetailChat";
 import { SentimentData } from "@/types/SentimentData";
+import Image from "next/image";
+import Loader from '../../../public/prism-loader.gif'
 
 const CallLogPage = () => {
   const params = useParams();
@@ -226,8 +228,9 @@ const CallLogPage = () => {
     return (
       <div className="flex-1 flex flex-col">
         <div className="flex-1 p-6">
-          <div className="flex items-center justify-center min-h-[400px]">
+          <div className="flex flex-col items-center justify-center min-h-[400px]">
             <div className="text-gray-600 text-lg">Loading call details...</div>
+                    <Image src={Loader} alt={"loading-icon"} width={480} height={480}/>
           </div>
         </div>
       </div>
