@@ -433,7 +433,7 @@ const CallLogTable: React.FC<CallLogTableProps> = ({ className }) => {
       {/* body */}
       <div className="flex-1 flex flex-col bg-[var(--color-bg-secondary)] shadow-sm rounded-lg border border-[var(--color-bg-secondary)] overflow-hidden">
         <div
-          className="overflow-auto flex-1 flex flex-col  [&::-webkit-scrollbar]:w-2
+          className="overflow-auto flex-1 flex flex-col [&::-webkit-scrollbar]:w-2
   [&::-webkit-scrollbar-track]:rounded-full
   [&::-webkit-scrollbar-track]:bg-gray-100
   [&::-webkit-scrollbar-thumb]:rounded-full

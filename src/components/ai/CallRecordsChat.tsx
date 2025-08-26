@@ -687,7 +687,13 @@ const CallRecordsChat: React.FC<CallRecordsChatProps> = ({
         )}
       </div>
 
-      <div className="flex-1 overflow-y-auto p-4 space-y-4 bg-black/60">
+      <div className="flex-1 overflow-y-auto p-4 space-y-4 bg-black/60 [&::-webkit-scrollbar]:w-2
+  [&::-webkit-scrollbar-track]:rounded-full
+  [&::-webkit-scrollbar-track]:bg-gray-100
+  [&::-webkit-scrollbar-thumb]:rounded-full
+  [&::-webkit-scrollbar-thumb]:bg-gray-300
+  dark:[&::-webkit-scrollbar-track]:bg-neutral-700
+  dark:[&::-webkit-scrollbar-thumb]:bg-neutral-500">
         {filteredRecords.length === 0 && !loading && (
           <div className="flex items-center gap-3 p-4 bg-white border rounded-lg">
             <AlertCircle className="w-5 h-5" />
@@ -701,12 +707,12 @@ const CallRecordsChat: React.FC<CallRecordsChatProps> = ({
         {messages.map((message) => (
           <div
             key={message.id}
-            className={`flex gap-3 ${
+            className={`flex gap-3  ${
               message.type === "user" ? "justify-end" : "justify-start"
             }`}
           >
             <div
-              className={`max-w-[85%] ${
+              className={`max-w-[85%]  ${
                 message.type === "user" ? "order-1" : ""
               }`}
             >
@@ -720,19 +726,19 @@ const CallRecordsChat: React.FC<CallRecordsChatProps> = ({
                 }`}
               >
                 {message.type === "assistant" && !message.error ? (
-                  <div className="prose prose-sm max-w-none">
+                  <div className="prose prose-sm max-w-none ">
                     <ReactMarkdown components={MarkdownComponents}>
                       {message.content}
                     </ReactMarkdown>
                   </div>
                 ) : (
-                  <div className="whitespace-pre-wrap text-xs leading-relaxed text-inherit">
+                  <div className="whitespace-pre-wrap text-xs leading-relaxed text-inherit ">
                     {message.content}
                   </div>
                 )}
 
                 {message.metadata && (
-                  <div className="text-xs mt-2 pt-2 border-t border-gray-200 flex items-center gap-4 opacity-70">
+                  <div className="text-xs mt-2 pt-2 border-t border-gray-200 flex items-center gap-4 opacity-70 ">
                     {message.metadata.processingTime && (
                       <span className="flex items-center gap-1">
                         <Clock className="w-3 h-3" />
