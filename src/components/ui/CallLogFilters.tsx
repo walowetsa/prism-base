@@ -9,7 +9,7 @@ export type FilterPeriod =
   | "last7days"
   | "lastMonth"
   | "dateRange";
-  
+
 interface CallLogFiltersProps {
   selectedFilter: FilterPeriod;
   onFilterChange: (filter: FilterPeriod) => void;
@@ -46,8 +46,11 @@ const CallLogFilters: React.FC<CallLogFiltersProps> = ({
   className,
 }) => {
   const [isRefreshing, setIsRefreshing] = useState(false);
-  const [isDispositionDropdownOpen, setIsDispositionDropdownOpen] = useState(false);
+  const [isDispositionDropdownOpen, setIsDispositionDropdownOpen] =
+    useState(false);
+  const [isAgentDropdownOpen, setIsAgentDropdownOpen] = useState(false);
   const dispositionDropdownRef = useRef<HTMLDivElement>(null);
+  const agentDropdownRef = useRef<HTMLDivElement>(null);
 
   const filterOptions = useMemo(
     () => [
@@ -68,6 +71,13 @@ const CallLogFilters: React.FC<CallLogFiltersProps> = ({
         !dispositionDropdownRef.current.contains(event.target as Node)
       ) {
         setIsDispositionDropdownOpen(false);
+      }
+
+      if (
+        agentDropdownRef.current &&
+        !agentDropdownRef.current.contains(event.target as Node)
+      ) {
+        setIsAgentDropdownOpen(false);
       }
     };
 
@@ -133,6 +143,33 @@ const CallLogFilters: React.FC<CallLogFiltersProps> = ({
     }
   };
 
+  const getAgentDisplayText = () => {
+    if (!selectedAgent) return "All Agents";
+
+    switch (selectedAgent) {
+      case "T10085496@tsagroup.com.au":
+        return "mdunstan@tsagroup.com.au";
+      case "T10085497@tsagroup.com.au":
+        return "mwilson.tsagroup.com.au";
+      case "T10085494@tsagroup.com.au":
+        return "vride.tsagroup.com.au";
+      case "T10085498@tsagroup.com.au":
+        return "bskipper.tsagroup.com.au";
+      case "T10085495@tsagroup.com.au":
+        return "ksingh@tsagroup.com.au";
+      case "T10085499@tsagroup.com.au":
+        return "elima@tsagroup.com.au";
+      case "T10085523@tsagroup.com.au":
+        return "srana@tsagroup.com.au";
+      case "T10085526@tsagroup.com.au":
+        return "ezgrajewski@tsagroup.com.au";
+      case "T10085531@tsagroup.com.au":
+        return "hcrooks.tsagroup.com.au";
+      default:
+        return selectedAgent;
+    }
+  };
+
   return (
     <div className={`${className}`}>
       <div className="flex items-center gap-3 flex-wrap">
@@ -175,37 +212,89 @@ const CallLogFilters: React.FC<CallLogFiltersProps> = ({
         </button>
 
         {/* Agent Filter */}
-        <select
-          id="agent-select"
-          value={selectedAgent}
-          onChange={(e) => onAgentChange(e.target.value)}
-          className="px-3 py-1.5 text-sm border border-gray-300/20 rounded-full bg-[var(--color-bg-secondary)] text-[var(--color-text-primary)] hover:border-gray-400 focus:outline-none focus:ring-2 focus:ring-[var(--color-text-primary)] focus:border-[var(--color-text-primary)] transition-colors duration-200 min-w-[140px]"
-        >
-          <option value="">All Agents</option>
-          {agents.map((agent) => (
-            <option key={agent} value={agent}>
-              {agent === "T10085496@tsagroup.com.au"
-                ? "mdunstan@tsagroup.com.au"
-                : agent === "T10085497@tsagroup.com.au"
-                ? "mwilson.tsagroup.com.au"
-                : agent === "T10085494@tsagroup.com.au"
-                ? "vride.tsagroup.com.au"
-                : agent === "T10085498@tsagroup.com.au"
-                ? "bskipper.tsagroup.com.au"
-                : agent === "T10085495@tsagroup.com.au"
-                ? "ksingh@tsagroup.com.au"
-                : agent === "T10085499@tsagroup.com.au"
-                ? "elima@tsagroup.com.au"
-                : agent === "T10085523@tsagroup.com.au"
-                ? "srana@tsagroup.com.au"
-                : agent === "T10085526@tsagroup.com.au"
-                ? "ezgrajewski@tsagroup.com.au"
-                : agent === "T10085531@tsagroup.com.au"
-                ? "hcrooks.tsagroup.com.au"
-                : agent}
-            </option>
-          ))}
-        </select>
+        <div className="relative" ref={agentDropdownRef}>
+          <button
+            type="button"
+            onClick={() => setIsAgentDropdownOpen(!isAgentDropdownOpen)}
+            className="px-3 py-1.5 text-sm border border-gray-300/20 rounded-full bg-[var(--color-bg-secondary)] text-[var(--color-text-primary)] hover:border-gray-400 focus:outline-none focus:ring-2 focus:ring-[var(--color-text-primary)] focus:border-[var(--color-text-primary)] transition-colors duration-200 min-w-[160px] flex justify-between items-center"
+          >
+            <span className="truncate">{getAgentDisplayText()}</span>
+            <svg
+              className={`w-4 h-4 transition-transform ml-2 shrink-0 ${
+                isAgentDropdownOpen ? "rotate-180" : ""
+              }`}
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                d="M19 9l-7 7-7-7"
+              />
+            </svg>
+          </button>
+
+          {isAgentDropdownOpen && (
+            <div
+              className="absolute z-[100] mt-1 w-full bg-[var(--color-bg-secondary)] border border-gray-300/20 rounded-md shadow-lg max-h-60 overflow-auto min-w-[320px]  [&::-webkit-scrollbar]:w-2
+  [&::-webkit-scrollbar-track]:rounded-full
+  [&::-webkit-scrollbar-track]:bg-gray-100
+  [&::-webkit-scrollbar-thumb]:rounded-full
+  [&::-webkit-scrollbar-thumb]:bg-gray-300
+  dark:[&::-webkit-scrollbar-track]:bg-neutral-700
+  dark:[&::-webkit-scrollbar-thumb]:bg-neutral-500"
+            >
+              <div className="py-1 ">
+                <button
+                  key="all-agents"
+                  onClick={() => {
+                    onAgentChange("");
+                    setIsAgentDropdownOpen(false);
+                  }}
+                  className={`w-full text-left px-3 py-2 hover:bg-black/60 cursor-pointer text-sm text-[var(--color-text-primary)] ${
+                    selectedAgent === "" ? "bg-black/40" : ""
+                  }`}
+                >
+                  All Agents
+                </button>
+                {agents.map((agent) => (
+                  <button
+                    key={agent}
+                    onClick={() => {
+                      onAgentChange(agent);
+                      setIsAgentDropdownOpen(false);
+                    }}
+                    className={`w-full text-left px-3 py-1 hover:bg-black/60 cursor-pointer text-sm text-[var(--color-text-primary)] ${
+                      selectedAgent === agent ? "bg-black/40" : ""
+                    }`}
+                  >
+                    {agent === "T10085496@tsagroup.com.au"
+                      ? "mdunstan@tsagroup.com.au"
+                      : agent === "T10085497@tsagroup.com.au"
+                      ? "mwilson.tsagroup.com.au"
+                      : agent === "T10085494@tsagroup.com.au"
+                      ? "vride.tsagroup.com.au"
+                      : agent === "T10085498@tsagroup.com.au"
+                      ? "bskipper.tsagroup.com.au"
+                      : agent === "T10085495@tsagroup.com.au"
+                      ? "ksingh@tsagroup.com.au"
+                      : agent === "T10085499@tsagroup.com.au"
+                      ? "elima@tsagroup.com.au"
+                      : agent === "T10085523@tsagroup.com.au"
+                      ? "srana@tsagroup.com.au"
+                      : agent === "T10085526@tsagroup.com.au"
+                      ? "ezgrajewski@tsagroup.com.au"
+                      : agent === "T10085531@tsagroup.com.au"
+                      ? "hcrooks.tsagroup.com.au"
+                      : agent}
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
+        </div>
 
         {/* Disposition Filter */}
         <div className="relative" ref={dispositionDropdownRef}>
@@ -214,7 +303,13 @@ const CallLogFilters: React.FC<CallLogFiltersProps> = ({
             onClick={() =>
               setIsDispositionDropdownOpen(!isDispositionDropdownOpen)
             }
-            className="px-3 py-1.5 text-sm border border-gray-300/20 rounded-full bg-[var(--color-bg-secondary)] text-[var(--color-text-primary)] hover:border-gray-400 focus:outline-none focus:ring-2 focus:ring-[var(--color-text-primary)] focus:border-[var(--color-text-primary)] transition-colors duration-200 min-w-[160px] flex justify-between items-center"
+            className="px-3 py-1.5 text-sm border border-gray-300/20 rounded-full bg-[var(--color-bg-secondary)] text-[var(--color-text-primary)] hover:border-gray-400 focus:outline-none focus:ring-2 focus:ring-[var(--color-text-primary)] focus:border-[var(--color-text-primary)] transition-colors duration-200 min-w-[160px] flex justify-between items-center  [&::-webkit-scrollbar]:w-2
+  [&::-webkit-scrollbar-track]:rounded-full
+  [&::-webkit-scrollbar-track]:bg-gray-100
+  [&::-webkit-scrollbar-thumb]:rounded-full
+  [&::-webkit-scrollbar-thumb]:bg-gray-300
+  dark:[&::-webkit-scrollbar-track]:bg-neutral-700
+  dark:[&::-webkit-scrollbar-thumb]:bg-neutral-500"
           >
             <span className="truncate">{getDispositionDisplayText()}</span>
             <svg
@@ -235,12 +330,12 @@ const CallLogFilters: React.FC<CallLogFiltersProps> = ({
           </button>
 
           {isDispositionDropdownOpen && (
-            <div className="absolute z-[100] mt-1 w-full bg-[var(--color-bg-secondary)] border border-gray-300/20 rounded-md shadow-lg max-h-60 overflow-auto">
+            <div className="absolute z-[100] mt-1 w-full bg-[var(--color-bg-secondary)] border border-gray-300/20 rounded-md shadow-lg max-h-60 min-w-[320px] overflow-auto">
               <div className="py-1">
                 {dispositions.map((disposition) => (
                   <label
                     key={disposition}
-                    className="flex items-center px-3 py-2 hover:bg-black/60 cursor-pointer"
+                    className="flex items-center px-3 py-1 hover:bg-black/60 cursor-pointer"
                   >
                     <input
                       type="checkbox"
@@ -300,7 +395,9 @@ const CallLogFilters: React.FC<CallLogFiltersProps> = ({
               onChange={(e) => onStartDateChange(e.target.value)}
               className="px-2 py-1 text-xs border border-gray-300/20 rounded-md bg-[var(--color-bg-secondary)] text-[var(--color-text-primary)] focus:outline-none focus:ring-2 focus:ring-[var(--color-text-primary)] focus:border-[var(--color-text-primary)]"
             />
-            <span className="text-xs font-bold text-[var(--color-text-accent)]">to</span>
+            <span className="text-xs font-bold text-[var(--color-text-accent)]">
+              to
+            </span>
             <input
               type="date"
               value={endDate || getTodayDate()}

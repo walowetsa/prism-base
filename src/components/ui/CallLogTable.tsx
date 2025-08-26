@@ -500,7 +500,7 @@ const CallLogTable: React.FC<CallLogTableProps> = ({ className }) => {
               {callRecords.map((record) => (
                 <tr
                   key={record.contact_id}
-                  className="hover:bg-neutral-600/20 transition-colors bg-[var(--color-bg-secondary)]/60"
+                  className="hover:bg-neutral-600/20 transition-colors bg-[var(--color-bg-secondary)]/60 "
                 >
                   <td className="px-4 py-1 text-sm text-[var(--color-text-primary)] w-64 truncate">
                     {record.agent_username === "T10085496@tsagroup.com.au"
@@ -605,7 +605,7 @@ const CallLogTable: React.FC<CallLogTableProps> = ({ className }) => {
             <button
               onClick={() => handlePageChange(currentPage - 1)}
               disabled={!pagination.hasPrev || loading}
-              className={`px-3 py-2 text-sm font-medium rounded-md ${
+              className={`px-3 py-2 text-sm font-medium rounded-md bg-gradient-to-r from-[var(--color-prism-blue)] to-[var(--color-prism-orange)] hover:scale-105 transition cursor-pointer ${
                 !pagination.hasPrev || loading
                   ? "bg-[var(--color-bg-secondary)] text-[var(--color-text-primary)] cursor-not-allowed"
                   : "bg-[var(--color-bg-secondary)] text-[var(--color-text-primary)] hover:bg-gray-50/40"
@@ -636,7 +636,7 @@ const CallLogTable: React.FC<CallLogTableProps> = ({ className }) => {
             <button
               onClick={() => handlePageChange(currentPage + 1)}
               disabled={!pagination.hasNext || loading}
-              className={`px-3 py-2 text-sm font-medium rounded-md ${
+              className={`px-3 py-2 text-sm font-medium rounded-md bg-gradient-to-r from-[var(--color-prism-orange)] to-[var(--color-prism-blue)] hover:scale-105 transition cursor-pointer ${
                 !pagination.hasNext || loading
                   ? "bg-[var(--color-bg-secondary)] text-[var(--color-text-primary)] cursor-not-allowed"
                   : "bg-[var(--color-bg-secondary)] text-[var(--color-text-primary)] hover:bg-gray-50/40"

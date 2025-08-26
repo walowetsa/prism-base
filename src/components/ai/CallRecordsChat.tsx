@@ -31,41 +31,41 @@ interface CallRecordsChatProps {
 
 const MarkdownComponents = {
   h1: ({ children }: any) => (
-    <h1 className="text-lg font-bold mb-2 text-gray-900">{children}</h1>
+    <h1 className="text-lg font-bold mb-2 text-[var(--color-text-primary)]">{children}</h1>
   ),
   h2: ({ children }: any) => (
-    <h2 className="text-base font-semibold mb-2 text-gray-900">{children}</h2>
+    <h2 className="text-base font-semibold mb-2 text-[var(--color-text-primary)]">{children}</h2>
   ),
   h3: ({ children }: any) => (
-    <h3 className="text-xs font-medium mb-1 text-gray-900">{children}</h3>
+    <h3 className="text-xs font-medium mb-1 text-[var(--color-text-primary)]">{children}</h3>
   ),
   p: ({ children }: any) => (
-    <p className="mb-2 text-gray-900 leading-relaxed">{children}</p>
+    <p className="mb-2 text-[var(--color-text-primary)] leading-relaxed">{children}</p>
   ),
   ul: ({ children }: any) => (
-    <ul className="list-disc list-inside mb-2 space-y-1 text-gray-900">
+    <ul className="list-disc list-inside mb-2 space-y-1 text-[var(--color-text-primary)]">
       {children}
     </ul>
   ),
   ol: ({ children }: any) => (
-    <ol className="list-decimal list-inside mb-2 space-y-1 text-gray-900">
+    <ol className="list-decimal list-inside mb-2 space-y-1 text-[var(--color-text-primary)]">
       {children}
     </ol>
   ),
-  li: ({ children }: any) => <li className="text-gray-900">{children}</li>,
+  li: ({ children }: any) => <li className="text-[var(--color-text-primary)]">{children}</li>,
   strong: ({ children }: any) => (
-    <strong className="font-semibold text-gray-900">{children}</strong>
+    <strong className="font-semibold text-[var(--color-text-primary)]">{children}</strong>
   ),
   em: ({ children }: any) => (
-    <em className="italic text-gray-900">{children}</em>
+    <em className="italic text-[var(--color-text-primary)]">{children}</em>
   ),
   code: ({ children }: any) => (
-    <code className="bg-gray-200 px-1 py-0.5 rounded text-xs font-mono text-gray-800">
+    <code className="bg-gray-200 px-1 py-0.5 rounded text-xs font-mono text-[var(--color-text-primary)]">
       {children}
     </code>
   ),
   blockquote: ({ children }: any) => (
-    <blockquote className="border-l-4 pl-3 italic text-gray-800 mb-2">
+    <blockquote className="border-l-4 pl-3 italic text-[var(--color-text-primary)] mb-2">
       {children}
     </blockquote>
   ),
@@ -78,12 +78,12 @@ const MarkdownComponents = {
     </div>
   ),
   th: ({ children }: any) => (
-    <th className="border border-gray-300 px-2 py-1 bg-gray-50 text-left font-semibold text-gray-900 text-xs">
+    <th className="border border-gray-300 px-2 py-1 bg-gray-50 text-left font-semibold text-[var(--color-text-primary)] text-xs">
       {children}
     </th>
   ),
   td: ({ children }: any) => (
-    <td className="border border-gray-300 px-2 py-1 text-gray-900 text-xs">
+    <td className="border border-gray-300 px-2 py-1 text-[var(--color-text-primary)] text-xs">
       {children}
     </td>
   ),
@@ -732,7 +732,7 @@ const CallRecordsChat: React.FC<CallRecordsChatProps> = ({
                     </ReactMarkdown>
                   </div>
                 ) : (
-                  <div className="whitespace-pre-wrap text-xs leading-relaxed text-inherit ">
+                  <div className="whitespace-pre-wrap text-xs leading-relaxed text-inherit">
                     {message.content}
                   </div>
                 )}
@@ -774,7 +774,7 @@ const CallRecordsChat: React.FC<CallRecordsChatProps> = ({
           <div className="flex gap-3 justify-start">
             <div className="bg-white rounded-xl px-4 py-3 border ">
               <div className="flex items-center gap-2">
-                <div className="text-xs text-black">
+                <div className="text-xs text-[var(--color-text-primary)]">
                   {dataComplexity?.complexity === "extreme"
                     ? "Thinking..."
                     : hasFullDispositionData

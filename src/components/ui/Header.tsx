@@ -23,7 +23,7 @@ const Header = () => {
         <div className="ml-auto">
           {pathname === "/insights" ? (
             <Link href={"/"}>
-              <button className="px-3 py-1.5 text-sm border-none rounded-md bg-black/20 text-[var(--color-text-primary)] min-w-[150px] cursor-pointer hover:bg-black/60 transition-colors">
+              <button className="px-3 py-1.5 text-sm border-none rounded-md bg-black/60 text-[var(--color-text-primary)] min-w-[150px] cursor-pointer hover:bg-black/20 transition-colors">
                 <span className="bg-gradient-to-r from-[var(--color-prism-blue)] to-[var(--color-prism-orange)] bg-clip-text text-transparent">
                   View Call Logs
                 </span>
@@ -31,7 +31,7 @@ const Header = () => {
             </Link>
           ) : (
             <Link href={"/insights"}>
-              <button className="px-3 py-1.5 text-sm border-none rounded-md bg-black/20 text-[var(--color-text-primary)] min-w-[150px] cursor-pointer hover:bg-black/60 transition-colors">
+              <button className="px-3 py-1.5 text-sm border-none rounded-md bg-black/60 text-[var(--color-text-primary)] min-w-[150px] cursor-pointer hover:bg-black/20 transition-colors">
                 <span className="bg-gradient-to-r from-[var(--color-prism-blue)] to-[var(--color-prism-orange)] bg-clip-text text-transparent">
                   View Insights
                 </span>
