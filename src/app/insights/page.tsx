@@ -210,15 +210,6 @@ const InsightsPage = () => {
             disabled={loading || filtersLoading}
           />
         </div>
-        
-        {/* Status indicator */}
-        <div className="flex justify-center">
-          <div className="text-sm text-[var(--color-text-secondary)] flex items-center gap-x-4">
-            {loading && (
-              <span className="animate-pulse">Loading insights...</span>
-            )}
-          </div>
-        </div>
       </div>
       
       <div className="flex gap-x-4 max-h-[calc(100vh-160px)]">
