@@ -13,14 +13,16 @@ const InsightsPage = () => {
   const [allRecordsCount, setAllRecordsCount] = useState(0);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  
+
   // Filter states
   const [filterPeriod, setFilterPeriod] = useState<FilterPeriod>("today");
   const [selectedAgent, setSelectedAgent] = useState<string>("");
-  const [selectedDispositions, setSelectedDispositions] = useState<string[]>([]);
+  const [selectedDispositions, setSelectedDispositions] = useState<string[]>(
+    []
+  );
   const [startDate, setStartDate] = useState<string>("");
   const [endDate, setEndDate] = useState<string>("");
-  
+
   // Filter options loaded separately
   const [uniqueAgents, setUniqueAgents] = useState<string[]>([]);
   const [uniqueDispositions, setUniqueDispositions] = useState<string[]>([]);
@@ -35,17 +37,17 @@ const InsightsPage = () => {
       // For insights, we want to fetch more records to get better statistics
       // We'll use a higher limit but still benefit from server-side filtering
       const params = new URLSearchParams({
-        page: '1',
-        limit: '99999', // Get more records for insights analysis
+        page: "1",
+        limit: "99999", // Get more records for insights analysis
         filterPeriod,
         ...(selectedAgent && { agent: selectedAgent }),
-        ...(selectedDispositions.length > 0 && { 
-          dispositions: selectedDispositions.join(',') 
+        ...(selectedDispositions.length > 0 && {
+          dispositions: selectedDispositions.join(","),
         }),
         ...(startDate && { startDate }),
         ...(endDate && { endDate }),
-        sortField: 'initiation_timestamp',
-        sortDirection: 'desc'
+        sortField: "initiation_timestamp",
+        sortDirection: "desc",
       });
 
       const response = await fetch(`/api/supabase/call-logs?${params}`);
@@ -62,7 +64,6 @@ const InsightsPage = () => {
 
       setCallRecords(result.data || []);
       setAllRecordsCount(result.pagination.total || 0);
-
     } catch (err) {
       console.error("Error fetching call records:", err);
       setError(
@@ -77,19 +78,19 @@ const InsightsPage = () => {
   const fetchFilterOptions = useCallback(async () => {
     try {
       setFiltersLoading(true);
-      
+
       // Fetch agents and dispositions in parallel
       const [agentsResponse, dispositionsResponse] = await Promise.all([
-        fetch('/api/supabase/call-logs', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ type: 'agents' })
+        fetch("/api/supabase/call-logs", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ type: "agents" }),
         }),
-        fetch('/api/supabase/call-logs', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ type: 'dispositions' })
-        })
+        fetch("/api/supabase/call-logs", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ type: "dispositions" }),
+        }),
       ]);
 
       if (agentsResponse.ok) {
@@ -101,9 +102,8 @@ const InsightsPage = () => {
         const dispositionsResult = await dispositionsResponse.json();
         setUniqueDispositions(dispositionsResult.data || []);
       }
-
     } catch (error) {
-      console.error('Error fetching filter options:', error);
+      console.error("Error fetching filter options:", error);
     } finally {
       setFiltersLoading(false);
     }
@@ -126,7 +126,7 @@ const InsightsPage = () => {
     startDate,
     endDate,
     fetchCallRecords,
-    filtersLoading
+    filtersLoading,
   ]);
 
   // Initialize default dates when dateRange is selected
@@ -135,15 +135,15 @@ const InsightsPage = () => {
       const today = new Date();
       const sevenDaysAgo = new Date();
       sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
-      
-      setStartDate(sevenDaysAgo.toISOString().split('T')[0]);
-      setEndDate(today.toISOString().split('T')[0]);
+
+      setStartDate(sevenDaysAgo.toISOString().split("T")[0]);
+      setEndDate(today.toISOString().split("T")[0]);
     }
   }, [filterPeriod, startDate, endDate]);
 
   const handleFilterChange = (filter: FilterPeriod) => {
     setFilterPeriod(filter);
-    
+
     if (filter !== "dateRange") {
       setStartDate("");
       setEndDate("");
@@ -211,7 +211,7 @@ const InsightsPage = () => {
           />
         </div>
       </div>
-      
+
       <div className="flex gap-x-4 max-h-[calc(100vh-160px)]">
         <div className="flex-1 max-h-[calc(100vh-160px)]">
           <InsightsStatsDashboard

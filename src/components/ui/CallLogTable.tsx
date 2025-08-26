@@ -39,20 +39,22 @@ const CallLogTable: React.FC<CallLogTableProps> = ({ className }) => {
     hasNext: false,
     hasPrev: false,
   });
-  
+
   const [openDropdownId, setOpenDropdownId] = useState<string | null>(null);
   const [sortState, setSortState] = useState<SortState>({
     field: null,
     direction: "asc",
   });
-  
+
   // Filter states
   const [filterPeriod, setFilterPeriod] = useState<FilterPeriod>("today");
   const [selectedAgent, setSelectedAgent] = useState<string>("");
-  const [selectedDispositions, setSelectedDispositions] = useState<string[]>([]);
+  const [selectedDispositions, setSelectedDispositions] = useState<string[]>(
+    []
+  );
   const [startDate, setStartDate] = useState<string>("");
   const [endDate, setEndDate] = useState<string>("");
-  
+
   const [uniqueAgents, setUniqueAgents] = useState<string[]>([]);
   const [uniqueDispositions, setUniqueDispositions] = useState<string[]>([]);
   const [filtersLoading, setFiltersLoading] = useState(true);
@@ -60,86 +62,85 @@ const CallLogTable: React.FC<CallLogTableProps> = ({ className }) => {
   const dropdownRef = useRef<HTMLDivElement>(null);
   const recordsPerPage = 100;
 
-  const fetchCallRecords = useCallback(async (
-    page: number = currentPage,
-    resetPage: boolean = false
-  ) => {
-    try {
-      setLoading(true);
-      setError(null);
+  const fetchCallRecords = useCallback(
+    async (page: number = currentPage, resetPage: boolean = false) => {
+      try {
+        setLoading(true);
+        setError(null);
 
-      const actualPage = resetPage ? 1 : page;
-      
-      const params = new URLSearchParams({
-        page: actualPage.toString(),
-        limit: recordsPerPage.toString(),
-        filterPeriod,
-        ...(selectedAgent && { agent: selectedAgent }),
-        ...(selectedDispositions.length > 0 && { 
-          dispositions: selectedDispositions.join(',') 
-        }),
-        ...(startDate && { startDate }),
-        ...(endDate && { endDate }),
-        ...(sortState.field && { 
-          sortField: sortState.field,
-          sortDirection: sortState.direction 
-        }),
-      });
+        const actualPage = resetPage ? 1 : page;
 
-      const response = await fetch(`/api/supabase/call-logs?${params}`);
+        const params = new URLSearchParams({
+          page: actualPage.toString(),
+          limit: recordsPerPage.toString(),
+          filterPeriod,
+          ...(selectedAgent && { agent: selectedAgent }),
+          ...(selectedDispositions.length > 0 && {
+            dispositions: selectedDispositions.join(","),
+          }),
+          ...(startDate && { startDate }),
+          ...(endDate && { endDate }),
+          ...(sortState.field && {
+            sortField: sortState.field,
+            sortDirection: sortState.direction,
+          }),
+        });
 
-      if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
+        const response = await fetch(`/api/supabase/call-logs?${params}`);
+
+        if (!response.ok) {
+          throw new Error(`HTTP error! status: ${response.status}`);
+        }
+
+        const result = await response.json();
+
+        if (result.error) {
+          throw new Error(result.error);
+        }
+
+        setCallRecords(result.data || []);
+        setPagination(result.pagination);
+
+        if (resetPage) {
+          setCurrentPage(1);
+        } else {
+          setCurrentPage(actualPage);
+        }
+      } catch (err) {
+        console.error("Error fetching call records:", err);
+        setError(
+          err instanceof Error ? err.message : "Failed to fetch call records"
+        );
+      } finally {
+        setLoading(false);
       }
-
-      const result = await response.json();
-
-      if (result.error) {
-        throw new Error(result.error);
-      }
-
-      setCallRecords(result.data || []);
-      setPagination(result.pagination);
-      
-      if (resetPage) {
-        setCurrentPage(1);
-      } else {
-        setCurrentPage(actualPage);
-      }
-
-    } catch (err) {
-      console.error("Error fetching call records:", err);
-      setError(
-        err instanceof Error ? err.message : "Failed to fetch call records"
-      );
-    } finally {
-      setLoading(false);
-    }
-  }, [
-    currentPage, 
-    filterPeriod, 
-    selectedAgent, 
-    selectedDispositions, 
-    startDate, 
-    endDate, 
-    sortState
-  ]);
+    },
+    [
+      currentPage,
+      filterPeriod,
+      selectedAgent,
+      selectedDispositions,
+      startDate,
+      endDate,
+      sortState,
+    ]
+  );
 
   const fetchFilterOptions = useCallback(async () => {
     try {
       setFiltersLoading(true);
-      
+
       const [agentsResponse, dispositionsResponse] = await Promise.all([
-        fetch('/api/supabase/call-logs', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ type: 'agents' })
+        fetch("/api/supabase/call-logs", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ type: "agents" }),
         }),
-        fetch('/api/supabase/call-logs', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ type: 'dispositions' })
-        })
+        fetch("/api/supabase/call-logs", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ type: "dispositions" }),
+        }),
       ]);
 
       if (agentsResponse.ok) {
@@ -151,9 +152,8 @@ const CallLogTable: React.FC<CallLogTableProps> = ({ className }) => {
         const dispositionsResult = await dispositionsResponse.json();
         setUniqueDispositions(dispositionsResult.data || []);
       }
-
     } catch (error) {
-      console.error('Error fetching filter options:', error);
+      console.error("Error fetching filter options:", error);
     } finally {
       setFiltersLoading(false);
     }
@@ -176,7 +176,7 @@ const CallLogTable: React.FC<CallLogTableProps> = ({ className }) => {
     endDate,
     sortState,
     fetchCallRecords,
-    filtersLoading
+    filtersLoading,
   ]);
 
   useEffect(() => {
@@ -374,7 +374,7 @@ const CallLogTable: React.FC<CallLogTableProps> = ({ className }) => {
 
   const getSortableHeaderClass = (field: SortField) => {
     const baseClass =
-      "px-4 py-3 text-left text-xs font-medium text-emerald-800 uppercase tracking-wider cursor-pointer hover:bg-gray-100/20 transition-colors select-none";
+      "px-4 py-1 text-left text-xs font-medium text-emerald-800 uppercase tracking-wider cursor-pointer hover:bg-gray-100/20 transition-colors select-none";
     const activeClass = sortState.field === field ? "bg-black/60" : "";
     return `${baseClass} ${activeClass}`;
   };
@@ -405,8 +405,6 @@ const CallLogTable: React.FC<CallLogTableProps> = ({ className }) => {
     );
   }
 
-
-
   return (
     <div
       className={`w-full flex-1 ${className} flex flex-col max-h-[calc(100vh-120px)]`}
@@ -431,11 +429,7 @@ const CallLogTable: React.FC<CallLogTableProps> = ({ className }) => {
           />
         </div>
         <div className="text-sm text-gray-600">
-          {loading ? (
-            "Loading..."
-          ) : (
-            `${pagination.total} total records`
-          )}
+          {loading ? "Loading..." : `${pagination.total} total records`}
         </div>
       </div>
 
@@ -485,18 +479,23 @@ const CallLogTable: React.FC<CallLogTableProps> = ({ className }) => {
                     </span>
                   </div>
                 </th>
-                <th className="px-4 py-3 text-center text-xs font-medium text-[var(--color-text-primary)] uppercase tracking-wider w-16">Lead</th>
+                <th className="px-4 py-1 text-center text-xs font-medium text-[var(--color-text-primary)] uppercase tracking-wider w-16">
+                  Lead
+                </th>
                 {/* Add Sentiment Score */}
-                <th className="px-4 py-3 text-left text-xs font-medium text-[var(--color-text-primary)] uppercase tracking-wider">
+                <th className="px-4 py-1 text-left text-xs font-medium text-[var(--color-text-primary)] uppercase tracking-wider">
                   Summary
                 </th>
-                <th className="px-4 py-3 text-left text-xs font-medium text-[var(--color-text-primary)] uppercase tracking-wider w-20"></th>
+                <th className="px-4 py-1 text-left text-xs font-medium text-[var(--color-text-primary)] uppercase tracking-wider w-20"></th>
               </tr>
             </thead>
             <tbody className="bg-black divide-y divide-[var(--color-bg-secondary)]">
               {loading && callRecords.length > 0 && (
                 <tr>
-                  <td colSpan={7} className="px-4 py-2 text-center text-gray-400">
+                  <td
+                    colSpan={7}
+                    className="px-4 py-2 text-center text-gray-400"
+                  >
                     <div className="animate-pulse">Updating...</div>
                   </td>
                 </tr>
@@ -506,21 +505,37 @@ const CallLogTable: React.FC<CallLogTableProps> = ({ className }) => {
                   key={record.contact_id}
                   className="hover:bg-neutral-600/20 transition-colors bg-[var(--color-bg-secondary)]/60"
                 >
-                  <td className="px-4 py-3 text-sm text-[var(--color-text-primary)] w-64 truncate">
-                    {
-                      record.agent_username === 'T10085496@tsagroup.com.au' ? 'mdunstan@tsagroup.com.au' : record.agent_username === 'T10085497@tsagroup.com.au' ? 'mwilson.tsagroup.com.au' : record.agent_username === 'T10085494@tsagroup.com.au' ? 'vride.tsagroup.com.au' : record.agent_username === 'T10085498@tsagroup.com.au' ? 'bskipper.tsagroup.com.au' : record.agent_username === 'T10085495@tsagroup.com.au' ? 'ksingh@tsagroup.com.au' : record.agent_username === 'T10085499@tsagroup.com.au' ? 'elima@tsagroup.com.au' : record.agent_username === 'T10085523@tsagroup.com.au' ? 'srana@tsagroup.com.au' : record.agent_username === 'T10085526@tsagroup.com.au' ? 'ezgrajewski@tsagroup.com.au' : record.agent_username === 'T10085531@tsagroup.com.au' ? 'hcrooks.tsagroup.com.au' : record.agent_username
-                    }
+                  <td className="px-4 py-1 text-sm text-[var(--color-text-primary)] w-64 truncate">
+                    {record.agent_username === "T10085496@tsagroup.com.au"
+                      ? "mdunstan@tsagroup.com.au"
+                      : record.agent_username === "T10085497@tsagroup.com.au"
+                      ? "mwilson.tsagroup.com.au"
+                      : record.agent_username === "T10085494@tsagroup.com.au"
+                      ? "vride.tsagroup.com.au"
+                      : record.agent_username === "T10085498@tsagroup.com.au"
+                      ? "bskipper.tsagroup.com.au"
+                      : record.agent_username === "T10085495@tsagroup.com.au"
+                      ? "ksingh@tsagroup.com.au"
+                      : record.agent_username === "T10085499@tsagroup.com.au"
+                      ? "elima@tsagroup.com.au"
+                      : record.agent_username === "T10085523@tsagroup.com.au"
+                      ? "srana@tsagroup.com.au"
+                      : record.agent_username === "T10085526@tsagroup.com.au"
+                      ? "ezgrajewski@tsagroup.com.au"
+                      : record.agent_username === "T10085531@tsagroup.com.au"
+                      ? "hcrooks.tsagroup.com.au"
+                      : record.agent_username}
                   </td>
-                  <td className="px-4 py-3 text-sm text-[var(--color-text-primary)] w-64">
+                  <td className="px-4 py-1 text-sm text-[var(--color-text-primary)] w-64">
                     {formatTimestamp(record.initiation_timestamp)}
                   </td>
-                  <td className="px-4 py-3 text-sm text-[var(--color-text-primary)] w-24">
+                  <td className="px-4 py-1 text-sm text-[var(--color-text-primary)] w-24">
                     {formatCallDuration(record.call_duration)}
                   </td>
-                  <td className="px-4 py-3 text-sm text-[var(--color-text-primary)] w-80 truncate">
+                  <td className="px-4 py-1 text-sm text-[var(--color-text-primary)] w-80 truncate">
                     {record.disposition_title || "N/A"}
                   </td>
-                  <td className="px-4 py-3 text-sm text-[var(--color-text-primary)] w-16 text-center">
+                  <td className="px-4 py-1 text-sm text-[var(--color-text-primary)] w-16 text-center">
                     {isSuccessfulOutcome(record.disposition_title) && (
                       <span
                         className="text-green-400 text-lg"
@@ -530,7 +545,7 @@ const CallLogTable: React.FC<CallLogTableProps> = ({ className }) => {
                       </span>
                     )}
                   </td>
-                  <td className="px-4 py-3 text-sm text-[var(--color-text-primary)]">
+                  <td className="px-4 py-1 text-sm text-[var(--color-text-primary)]">
                     <div
                       className="truncate"
                       title={record.call_summary || "N/A"}
@@ -541,9 +556,13 @@ const CallLogTable: React.FC<CallLogTableProps> = ({ className }) => {
                       }
                     </div>
                   </td>
-                  <td className="px-4 py-3 text-sm text-[var(--color-text-accent)] w-20 relative">
+                  <td className="px-4 py-1 text-sm text-[var(--color-text-accent)] w-20 relative">
                     <div
-                      ref={openDropdownId === record.contact_id ? dropdownRef : null}
+                      ref={
+                        openDropdownId === record.contact_id
+                          ? dropdownRef
+                          : null
+                      }
                     >
                       <button
                         onClick={() => handleEllipsisClick(record.contact_id)}
@@ -631,7 +650,8 @@ const CallLogTable: React.FC<CallLogTableProps> = ({ className }) => {
           </div>
 
           <div className="text-sm text-gray-600">
-            Page {currentPage} of {pagination.totalPages} • Total: {pagination.total} records
+            Page {currentPage} of {pagination.totalPages} • Total:{" "}
+            {pagination.total} records
           </div>
         </div>
       )}

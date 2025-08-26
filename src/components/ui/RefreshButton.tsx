@@ -1,29 +1,29 @@
-import { useState } from 'react'
+import { useState } from "react";
 
 interface RefreshButtonProps {
-  onRefresh: () => Promise<void>
-  disabled?: boolean
-  className?: string
+  onRefresh: () => Promise<void>;
+  disabled?: boolean;
+  className?: string;
 }
 
-const RefreshButton: React.FC<RefreshButtonProps> = ({ 
-  onRefresh, 
-  disabled = false, 
+const RefreshButton: React.FC<RefreshButtonProps> = ({
+  onRefresh,
+  disabled = false,
 }) => {
-  const [isRefreshing, setIsRefreshing] = useState(false)
+  const [isRefreshing, setIsRefreshing] = useState(false);
 
   const handleRefresh = async () => {
-    if (isRefreshing || disabled) return
+    if (isRefreshing || disabled) return;
 
     try {
-      setIsRefreshing(true)
-      await onRefresh()
+      setIsRefreshing(true);
+      await onRefresh();
     } catch (error) {
-      console.error('Error refreshing data:', error)
+      console.error("Error refreshing data:", error);
     } finally {
-      setIsRefreshing(false)
+      setIsRefreshing(false);
     }
-  }
+  };
 
   return (
     <button
@@ -47,7 +47,7 @@ const RefreshButton: React.FC<RefreshButtonProps> = ({
         />
       </svg>
     </button>
-  )
-}
+  );
+};
 
-export default RefreshButton
+export default RefreshButton;

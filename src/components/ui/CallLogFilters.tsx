@@ -1,8 +1,8 @@
 "use client";
 
-import Link from "next/link";
+// import Link from "next/link";
 import { useMemo, useState, useRef, useEffect } from "react";
-import { usePathname } from "next/navigation";
+// import { usePathname } from "next/navigation";
 
 export type FilterPeriod =
   | "all"
@@ -11,7 +11,7 @@ export type FilterPeriod =
   | "last7days"
   | "lastMonth"
   | "dateRange";
-
+  
 interface CallLogFiltersProps {
   selectedFilter: FilterPeriod;
   onFilterChange: (filter: FilterPeriod) => void;
@@ -19,7 +19,7 @@ interface CallLogFiltersProps {
   onAgentChange: (agent: string) => void;
   agents: string[];
   selectedDispositions: string[];
-  onDispositionsChange: (dispositions: string[]) => void; 
+  onDispositionsChange: (dispositions: string[]) => void;
   dispositions: string[];
   startDate: string;
   endDate: string;
@@ -147,7 +147,6 @@ const CallLogFilters: React.FC<CallLogFiltersProps> = ({
     }
   };
 
-  const pathname = usePathname();
 
   return (
     <div className={`flex gap-4 ${className} flex-col w-full`}>
@@ -169,19 +168,25 @@ const CallLogFilters: React.FC<CallLogFiltersProps> = ({
               viewBox="0 0 24 24"
               xmlns="http://www.w3.org/2000/svg"
             >
-    <defs>
-      <linearGradient id="refreshGradient" x1="0%" y1="0%" x2="100%" y2="100%">
-        <stop offset="0%" stopColor="var(--color-prism-blue)" />
-        <stop offset="100%" stopColor="var(--color-prism-orange)" />
-      </linearGradient>
-    </defs>
-    <path
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      strokeWidth={2}
-      stroke="url(#refreshGradient)"
-      d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"
-    />
+              <defs>
+                <linearGradient
+                  id="refreshGradient"
+                  x1="0%"
+                  y1="0%"
+                  x2="100%"
+                  y2="100%"
+                >
+                  <stop offset="0%" stopColor="var(--color-prism-blue)" />
+                  <stop offset="100%" stopColor="var(--color-prism-orange)" />
+                </linearGradient>
+              </defs>
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                stroke="url(#refreshGradient)"
+                d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"
+              />
             </svg>
           </button>
         </div>
@@ -309,22 +314,26 @@ const CallLogFilters: React.FC<CallLogFiltersProps> = ({
             </button>
           </div>
         </div>
-
+{/* 
         <div className="ml-auto">
           {pathname === "/insights" ? (
             <Link href={"/"}>
               <button className="px-3 py-1.5 text-sm border-none rounded-md bg-[var(--color-bg-secondary)] text-[var(--color-text-primary)] min-w-[150px] cursor-pointer hover:bg-black/60 transition-colors">
-                <span className="bg-gradient-to-r from-[var(--color-prism-blue)] to-[var(--color-prism-orange)] bg-clip-text text-transparent">View Call Logs</span>
+                <span className="bg-gradient-to-r from-[var(--color-prism-blue)] to-[var(--color-prism-orange)] bg-clip-text text-transparent">
+                  View Call Logs
+                </span>
               </button>
             </Link>
           ) : (
             <Link href={"/insights"}>
               <button className="px-3 py-1.5 text-sm border-none rounded-md bg-[var(--color-bg-secondary)] text-[var(--color-text-primary)] min-w-[150px] cursor-pointer hover:bg-black/60 transition-colors">
-                <span className="bg-gradient-to-r from-[var(--color-prism-blue)] to-[var(--color-prism-orange)] bg-clip-text text-transparent">View Insights</span>
+                <span className="bg-gradient-to-r from-[var(--color-prism-blue)] to-[var(--color-prism-orange)] bg-clip-text text-transparent">
+                  View Insights
+                </span>
               </button>
             </Link>
           )}
-        </div>
+        </div> */}
       </div>
       <div className="flex flex-col">
         <div className="flex items-center space-x-1 p-1 rounded-full">
@@ -359,7 +368,9 @@ const CallLogFilters: React.FC<CallLogFiltersProps> = ({
                 />
               </div>
               <div className="flex items-center gap-2">
-                <label className="text-sm font-bold text-[var(--color-text-accent)]">-</label>
+                <label className="text-sm font-bold text-[var(--color-text-accent)]">
+                  -
+                </label>
                 <input
                   type="date"
                   value={endDate || getTodayDate()}

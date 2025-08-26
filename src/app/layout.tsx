@@ -9,7 +9,6 @@ const gilroy = localFont({
   display: "swap",
 });
 
-
 export const metadata: Metadata = {
   title: "Prism - TSA Analytics",
   description: "AI Analytics by TSA",
@@ -22,9 +21,7 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en">
-      <body
-        className={`${gilroy.variable} antialiased h-screen flex flex-col`}
-      >
+      <body className={`${gilroy.variable} antialiased h-screen flex flex-col`}>
         <Header />
         <div className="flex-1 bg-[var(--color-bg-primary)] flex flex-col max-h-[calc(100vh-64px])]">
           {children}

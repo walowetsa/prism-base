@@ -281,23 +281,19 @@ const CallLogPage = () => {
       <div className="flex-1 p-4">
         <div className="max-w-full">
           {/* Header */}
-          <div className="mb-6">
-            <button
-              onClick={() => router.back()}
-              className="mb-4 px-4 py-2 text-sm text-[var(--color-text-primary)] hover:text-black/60 transition-colors cursor-pointer"
-            >
-              ← Back to Call Logs
-            </button>
-            <h1 className="text-3xl font-bold text-[var(--color-text-primary)]">
-              <span className="bg-gradient-to-r from-[var(--color-prism-blue)] to-[var(--color-prism-orange)] bg-clip-text text-transparent">Call Details</span>
+          <div className="mb-6 flex items-center gap-x-4">
+            <h1 className="text-xl font-bold text-[var(--color-text-primary)]">
+              <span className="bg-gradient-to-r from-[var(--color-prism-blue)] to-[var(--color-prism-orange)] bg-clip-text text-transparent">
+                Call Details
+              </span>
             </h1>
-            <p className="text-gray-600 mt-1">Contact ID: {contact_id}</p>
+            <p className="text-sm text-[var(--color-text-primary)] mt-1">Contact ID: {contact_id}</p>
           </div>
 
           <div className="grid grid-cols-3 gap-6">
             {/* Left Column - Call Details */}
             <div
-              className="space-y-6 max-h-[calc(100vh-240px)] overflow-y-scroll [&::-webkit-scrollbar]:w-2
+              className="space-y-6 max-h-[calc(100vh-160px)] overflow-y-scroll [&::-webkit-scrollbar]:w-2
   [&::-webkit-scrollbar-track]:rounded-full
   [&::-webkit-scrollbar-track]:bg-gray-100
   [&::-webkit-scrollbar-thumb]:rounded-full
@@ -307,12 +303,14 @@ const CallLogPage = () => {
             >
               {/* Call Overview */}
               <div className="bg-black/60 rounded-lg shadow-sm p-6">
-                <h2 className="text-xl font-semibold text-[var(--color-text-primary)] mb-4">
-              <span className="bg-gradient-to-r from-[var(--color-prism-blue)] to-[var(--color-prism-orange)] bg-clip-text text-transparent">Overview</span>
+                <h2 className="text-xl font-semibold text-[var(--color-text-primary)] mb-2">
+                  <span className="bg-gradient-to-r from-[var(--color-prism-blue)] to-[var(--color-prism-orange)] bg-clip-text text-transparent">
+                    Overview
+                  </span>
                 </h2>
-                <div className="grid grid-cols-1 gap-4">
+                <div className="grid grid-cols-1 gap-2">
                   <div>
-                    <label className="block text-sm font-medium text-[var(--color-text-primary)] mb-1">
+                    <label className="block text-sm font-medium text-[var(--color-text-primary)]">
                       Agent
                     </label>
                     <p className="text-[var(--color-text-accent)]">
@@ -320,7 +318,7 @@ const CallLogPage = () => {
                     </p>
                   </div>
                   <div>
-                    <label className="block text-sm font-medium text-[var(--color-text-primary)] mb-1">
+                    <label className="block text-sm font-medium text-[var(--color-text-primary)]">
                       Queue
                     </label>
                     <p className="text-[var(--color-text-accent)]">
@@ -328,7 +326,7 @@ const CallLogPage = () => {
                     </p>
                   </div>
                   <div>
-                    <label className="block text-sm font-medium text-[var(--color-text-primary)] mb-1">
+                    <label className="block text-sm font-medium text-[var(--color-text-primary)]">
                       Timestamp
                     </label>
                     <p className="text-[var(--color-text-accent)]">
@@ -336,7 +334,7 @@ const CallLogPage = () => {
                     </p>
                   </div>
                   <div>
-                    <label className="block text-sm font-medium text-[var(--color-text-primary)] mb-1">
+                    <label className="block text-sm font-medium text-[var(--color-text-primary)]">
                       Duration
                     </label>
                     <p className="text-[var(--color-text-accent)]">
@@ -344,7 +342,7 @@ const CallLogPage = () => {
                     </p>
                   </div>
                   <div>
-                    <label className="block text-sm font-medium text-[var(--color-text-primary)] mb-1">
+                    <label className="block text-sm font-medium text-[var(--color-text-primary)]">
                       Disposition
                     </label>
                     <p className="text-[var(--color-text-accent)]">
@@ -352,7 +350,7 @@ const CallLogPage = () => {
                     </p>
                   </div>
                   <div>
-                    <label className="block text-sm font-medium text-[var(--color-text-primary)] mb-1">
+                    <label className="block text-sm font-medium text-[var(--color-text-primary)]">
                       Customer CLI
                     </label>
                     <p className="text-[var(--color-text-accent)]">
@@ -366,7 +364,9 @@ const CallLogPage = () => {
               {callRecord.call_summary && (
                 <div className="bg-black/60 rounded-lg shadow-sm p-6">
                   <h2 className="text-xl font-semibold text-[var(--color-text-primary)] mb-4">
-              <span className="bg-gradient-to-r from-[var(--color-prism-blue)] to-[var(--color-prism-orange)] bg-clip-text text-transparent">Summary</span>
+                    <span className="bg-gradient-to-r from-[var(--color-prism-blue)] to-[var(--color-prism-orange)] bg-clip-text text-transparent">
+                      Summary
+                    </span>
                   </h2>
                   <p className="text-neutral-200 leading-relaxed text-sm">
                     {callRecord.call_summary}
@@ -377,9 +377,11 @@ const CallLogPage = () => {
               {/* Technical Details */}
               <div className="bg-black/60 rounded-lg shadow-sm p-6">
                 <h3 className="text-lg font-semibold text-[var(--color-text-primary)] mb-3">
-              <span className="bg-gradient-to-r from-[var(--color-prism-blue)] to-[var(--color-prism-orange)] bg-clip-text text-transparent">Technicals</span>
+                  <span className="bg-gradient-to-r from-[var(--color-prism-blue)] to-[var(--color-prism-orange)] bg-clip-text text-transparent">
+                    Technicals
+                  </span>
                 </h3>
-                <div className="space-y-3 text-sm">
+                <div className="space-y-2 text-sm">
                   <div>
                     <label className="block font-medium text-white">
                       Time in Queue
@@ -420,7 +422,9 @@ const CallLogPage = () => {
                 callRecord.sentiment_analysis.length > 0 && (
                   <div className="bg-black/60 rounded-lg shadow-sm p-6">
                     <h3 className="text-lg font-semibold text-[var(--color-text-primary)] mb-4">
-              <span className="bg-gradient-to-r from-[var(--color-prism-blue)] to-[var(--color-prism-orange)] bg-clip-text text-transparent">Sentiment Analysis</span>
+                      <span className="bg-gradient-to-r from-[var(--color-prism-blue)] to-[var(--color-prism-orange)] bg-clip-text text-transparent">
+                        Sentiment Analysis
+                      </span>
                     </h3>
 
                     {(() => {
@@ -579,7 +583,7 @@ const CallLogPage = () => {
 
             {/* Middle Column - Transcript */}
             <div
-              className="bg-black/60 rounded-lg shadow-sm p-6 max-h-[calc(100vh-240px)] overflow-y-scroll [&::-webkit-scrollbar]:w-2
+              className="bg-black/60 rounded-lg shadow-sm p-6 max-h-[calc(100vh-160px)] overflow-y-scroll [&::-webkit-scrollbar]:w-2
   [&::-webkit-scrollbar-track]:rounded-full
   [&::-webkit-scrollbar-track]:bg-gray-100
   [&::-webkit-scrollbar-thumb]:rounded-full
@@ -589,7 +593,9 @@ const CallLogPage = () => {
             >
               <div className="flex items-center justify-between mb-4">
                 <h2 className="text-xl font-semibold text-[var(--color-text-primary)]">
-              <span className="bg-gradient-to-r from-[var(--color-prism-blue)] to-[var(--color-prism-orange)] bg-clip-text text-transparent">Transcript</span>
+                  <span className="bg-gradient-to-r from-[var(--color-prism-blue)] to-[var(--color-prism-orange)] bg-clip-text text-transparent">
+                    Transcript
+                  </span>
                 </h2>
               </div>
               <Transcript
@@ -601,7 +607,7 @@ const CallLogPage = () => {
             </div>
 
             {/* Right Column - Chat Interface */}
-            <div className="rounded-lg shadow-sm p-0 flex flex-col max-h-[calc(100vh-240px)]">
+            <div className="rounded-lg shadow-sm p-0 flex flex-col max-h-[calc(100vh-160px)]">
               <CallDetailChat
                 callRecord={callRecord}
                 transcriptData={transcriptData}

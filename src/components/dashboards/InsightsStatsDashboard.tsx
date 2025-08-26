@@ -153,7 +153,6 @@ const InsightsStatsDashboard: React.FC<InsightsStatsDashboardProps> = ({
       { name: "Negative", count: sentimentCounts.NEGATIVE, color: "#dc2626" },
     ];
 
-
     return {
       totalCalls,
       successfulCalls,
@@ -186,24 +185,27 @@ const InsightsStatsDashboard: React.FC<InsightsStatsDashboardProps> = ({
       </div>
     );
   }
-  
+
   return (
-    <div className="flex-1 p-4 space-y-6 max-h-[calc(100vh-220px)] overflow-y-scroll  [&::-webkit-scrollbar]:w-2
+    <div
+      className="flex-1 p-4 space-y-6 max-h-[calc(100vh-220px)] overflow-y-scroll  [&::-webkit-scrollbar]:w-2
   [&::-webkit-scrollbar-track]:rounded-full
   [&::-webkit-scrollbar-track]:bg-gray-100
   [&::-webkit-scrollbar-thumb]:rounded-full
   [&::-webkit-scrollbar-thumb]:bg-gray-300
   dark:[&::-webkit-scrollbar-track]:bg-neutral-700
-  dark:[&::-webkit-scrollbar-thumb]:bg-neutral-500">
+  dark:[&::-webkit-scrollbar-thumb]:bg-neutral-500"
+    >
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
         <div className="bg-black/60 p-6 rounded-lg shadow-sm">
           <div className="text-2xl font-bold text-[var(--color-text-primary)]">
             {statistics.totalCalls}
           </div>
           <div>
-        <span className="text-sm font-semibold tracking-wide bg-gradient-to-r from-[var(--color-prism-blue)] to-[var(--color-prism-orange)] bg-clip-text text-transparent">
-          Total Calls
-        </span></div>
+            <span className="text-sm font-semibold tracking-wide bg-gradient-to-r from-[var(--color-prism-blue)] to-[var(--color-prism-orange)] bg-clip-text text-transparent">
+              Total Calls
+            </span>
+          </div>
         </div>
 
         <div className="bg-black/60 p-6 rounded-lg shadow-sm">
@@ -211,9 +213,10 @@ const InsightsStatsDashboard: React.FC<InsightsStatsDashboardProps> = ({
             {statistics.successfulCalls}
           </div>
           <div className="text-sm text-neutral-200">
-        <span className="text-sm font-semibold tracking-wide bg-gradient-to-r from-[var(--color-prism-blue)] to-[var(--color-prism-orange)] bg-clip-text text-transparent">
-          Leads Generated
-        </span></div>
+            <span className="text-sm font-semibold tracking-wide bg-gradient-to-r from-[var(--color-prism-blue)] to-[var(--color-prism-orange)] bg-clip-text text-transparent">
+              Leads Generated
+            </span>
+          </div>
         </div>
 
         <div className="bg-black/60 p-6 rounded-lg shadow-sm">
@@ -221,9 +224,10 @@ const InsightsStatsDashboard: React.FC<InsightsStatsDashboardProps> = ({
             {formatPercentage(statistics.successRate)}
           </div>
           <div className="text-sm text-neutral-200">
-        <span className="text-sm font-semibold tracking-wide bg-gradient-to-r from-[var(--color-prism-blue)] to-[var(--color-prism-orange)] bg-clip-text text-transparent">
-          Generation Rate
-        </span></div>
+            <span className="text-sm font-semibold tracking-wide bg-gradient-to-r from-[var(--color-prism-blue)] to-[var(--color-prism-orange)] bg-clip-text text-transparent">
+              Generation Rate
+            </span>
+          </div>
         </div>
 
         <div className="bg-black/60 p-6 rounded-lg shadow-sm">
@@ -231,9 +235,10 @@ const InsightsStatsDashboard: React.FC<InsightsStatsDashboardProps> = ({
             {formatDuration(statistics.averageDurationSeconds)}
           </div>
           <div className="text-sm text-neutral-200">
-        <span className="text-sm font-semibold tracking-wide bg-gradient-to-r from-[var(--color-prism-blue)] to-[var(--color-prism-orange)] bg-clip-text text-transparent">
-          Avg. Handle Time
-        </span></div>
+            <span className="text-sm font-semibold tracking-wide bg-gradient-to-r from-[var(--color-prism-blue)] to-[var(--color-prism-orange)] bg-clip-text text-transparent">
+              Avg. Handle Time
+            </span>
+          </div>
         </div>
       </div>
 
@@ -241,10 +246,9 @@ const InsightsStatsDashboard: React.FC<InsightsStatsDashboardProps> = ({
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         <div className="bg-black/60 p-6 rounded-lg shadow-sm">
           <h3 className="text-lg font-semibold mb-4">
-            
-        <span className="tracking-wide bg-gradient-to-r from-[var(--color-prism-blue)] to-[var(--color-prism-orange)] bg-clip-text text-transparent">
-          Calls by Agent
-        </span>
+            <span className="tracking-wide bg-gradient-to-r from-[var(--color-prism-blue)] to-[var(--color-prism-orange)] bg-clip-text text-transparent">
+              Calls by Agent
+            </span>
           </h3>
           <div className="space-y-3">
             {Object.entries(statistics.callsByAgent)
@@ -281,10 +285,9 @@ const InsightsStatsDashboard: React.FC<InsightsStatsDashboardProps> = ({
 
         <div className="bg-black/60 p-6 rounded-lg shadow-sm">
           <h3 className="text-lg font-semibold text-[var(--color-text-primary)] mb-4">
-            
-        <span className="tracking-wide bg-gradient-to-r from-[var(--color-prism-blue)] to-[var(--color-prism-orange)] bg-clip-text text-transparent">
-          Top Dispositions
-        </span>
+            <span className="tracking-wide bg-gradient-to-r from-[var(--color-prism-blue)] to-[var(--color-prism-orange)] bg-clip-text text-transparent">
+              Top Dispositions
+            </span>
           </h3>
           <div className="space-y-3">
             {statistics.topDispositions.map(([disposition, count]) => (
@@ -300,7 +303,9 @@ const InsightsStatsDashboard: React.FC<InsightsStatsDashboardProps> = ({
                     {disposition}
                   </span>
                   {successfulOutcomes.includes(disposition) && (
-                    <span className="text-[var(--color-text-primary)] text-sm">✓</span>
+                    <span className="text-[var(--color-text-primary)] text-sm">
+                      ✓
+                    </span>
                   )}
                 </div>
                 <div className="flex items-center gap-2 ml-2">
@@ -327,10 +332,9 @@ const InsightsStatsDashboard: React.FC<InsightsStatsDashboardProps> = ({
       {statistics.totalCalls > 0 && (
         <div className="bg-black/60 p-6 rounded-lg shadow-sm">
           <h3 className="text-lg font-semibold text-neutral-200 mb-4">
-               
-        <span className="tracking-wide bg-gradient-to-r from-[var(--color-prism-blue)] to-[var(--color-prism-orange)] bg-clip-text text-transparent">
-          Leads Generated
-        </span>
+            <span className="tracking-wide bg-gradient-to-r from-[var(--color-prism-blue)] to-[var(--color-prism-orange)] bg-clip-text text-transparent">
+              Leads Generated
+            </span>
           </h3>
           <div className="flex items-center gap-4">
             <div className="flex-1 bg-neutral-800 rounded-full h-4 overflow-hidden">
@@ -350,21 +354,26 @@ const InsightsStatsDashboard: React.FC<InsightsStatsDashboardProps> = ({
       {statistics.dailyVolumeData.length > 0 && (
         <div className="bg-black/60 p-6 rounded-lg shadow-sm">
           <h3 className="text-lg font-semibold text-neutral-200 mb-4">
-              
-        <span className="tracking-wide bg-gradient-to-r from-[var(--color-prism-blue)] to-[var(--color-prism-orange)] bg-clip-text text-transparent">
-          Daily Call Volume
-        </span>
+            <span className="tracking-wide bg-gradient-to-r from-[var(--color-prism-blue)] to-[var(--color-prism-orange)] bg-clip-text text-transparent">
+              Daily Call Volume
+            </span>
           </h3>
           <div className="h-64">
             <ResponsiveContainer width="100%" height="100%">
               <LineChart data={statistics.dailyVolumeData}>
                 <defs>
-          {/* Line gradient */}
-          <linearGradient id="lineGradient" x1="0%" y1="0%" x2="100%" y2="0%">
-            <stop offset="0%" stopColor="var(--color-prism-blue)" />
-            <stop offset="100%" stopColor="var(--color-prism-orange)" />
-          </linearGradient>
-        </defs>
+                  {/* Line gradient */}
+                  <linearGradient
+                    id="lineGradient"
+                    x1="0%"
+                    y1="0%"
+                    x2="100%"
+                    y2="0%"
+                  >
+                    <stop offset="0%" stopColor="var(--color-prism-blue)" />
+                    <stop offset="100%" stopColor="var(--color-prism-orange)" />
+                  </linearGradient>
+                </defs>
                 <CartesianGrid strokeDasharray="3 3" stroke="#374151" />
                 <XAxis dataKey="date" stroke="#d1d5db" fontSize={12} />
                 <YAxis stroke="#d1d5db" fontSize={12} />
@@ -380,7 +389,7 @@ const InsightsStatsDashboard: React.FC<InsightsStatsDashboardProps> = ({
                 <Line
                   type="monotone"
                   dataKey="calls"
-          stroke="url(#lineGradient)"
+                  stroke="url(#lineGradient)"
                   strokeWidth={2}
                   dot={{ fill: "#d1d5db", strokeWidth: 0, r: 0 }}
                   activeDot={{ r: 0, fill: "#d1d5db" }}
@@ -394,10 +403,9 @@ const InsightsStatsDashboard: React.FC<InsightsStatsDashboardProps> = ({
       {statistics.sentimentData.some((item) => item.count > 0) && (
         <div className="bg-black/60 p-6 rounded-lg shadow-sm">
           <h3 className="text-lg font-semibold text-neutral-200 mb-4">
-               
-        <span className="tracking-wide bg-gradient-to-r from-[var(--color-prism-blue)] to-[var(--color-prism-orange)] bg-clip-text text-transparent">
-          Call Analysis Sentiment
-        </span>
+            <span className="tracking-wide bg-gradient-to-r from-[var(--color-prism-blue)] to-[var(--color-prism-orange)] bg-clip-text text-transparent">
+              Call Analysis Sentiment
+            </span>
           </h3>
           <div className="h-64">
             <ResponsiveContainer width="100%" height="100%">
@@ -434,7 +442,15 @@ const InsightsStatsDashboard: React.FC<InsightsStatsDashboardProps> = ({
                   style={{ backgroundColor: item.color }}
                 ></div>
                 <span className="text-sm text-neutral-200">
-                  {item.name}: {(Math.floor(item.count)/(statistics.sentimentData[0].count + statistics.sentimentData[1].count + statistics.sentimentData[2].count) * 100).toFixed(2)}%
+                  {item.name}:{" "}
+                  {(
+                    (Math.floor(item.count) /
+                      (statistics.sentimentData[0].count +
+                        statistics.sentimentData[1].count +
+                        statistics.sentimentData[2].count)) *
+                    100
+                  ).toFixed(2)}
+                  %
                 </span>
               </div>
             ))}
