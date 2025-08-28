@@ -1,6 +1,7 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import { NextRequest, NextResponse } from "next/server";
 import OpenAI from "openai";
+
 interface CallRecord {
   id: string;
   agent_username?: string;
@@ -11,6 +12,8 @@ interface CallRecord {
   primary_category?: string;
   initiation_timestamp?: string;
   total_hold_time?: any;
+  transcript_text?: string;
+  call_summary?: string;
   [key: string]: any;
 }
 
@@ -51,16 +54,41 @@ interface ProcessedMetrics {
   };
 }
 
+interface TranscriptContext {
+  includeTranscripts: boolean;
+  selectedTranscripts: {
+    id: string;
+    agent: string;
+    disposition: string;
+    sentiment: string;
+    transcript: string;
+    summary: string;
+    relevanceScore: number;
+  }[];
+  transcriptStats: {
+    totalAvailable: number;
+    selectedCount: number;
+    avgLength: number;
+  };
+}
+
 const openai = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY,
 });
 
 const RATE_LIMIT_CONFIG = {
   maxRetries: 5,
-  baseDelay: 1000, //
+  baseDelay: 1000,
   maxDelay: 30000,
   backoffMultiplier: 2,
 };
+
+// Token management constants
+const MAX_CONTEXT_TOKENS = 100000;
+const TRANSCRIPT_TOKEN_RATIO = 4; // Rough estimate: 4 chars per token
+const MAX_TRANSCRIPT_TOKENS = 15000; // Much smaller allocation for segments
+const MAX_SEGMENT_LENGTH = 300; // Characters per segment
+const MAX_SEGMENTS_PER_CALL = 3; // Maximum segments from each call
 
 const extractNumericValue = (value: any): number => {
   if (!value) return 0;
@@ -92,6 +120,192 @@ const extractSentiment = (sentimentAnalysis: any): string => {
 };
 
 const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
+
+// Determine if transcripts should be included based on query content
+const shouldIncludeTranscripts = (query: string, queryType: string): boolean => {
+  const transcriptIndicators = [
+    "transcript", "conversation", "said", "mentioned", "discussed",
+    "customer", "agent said", "complaint", "issue", "problem",
+    "training", "quality", "script", "tone", "language", "communication",
+    "specific", "example", "instance", "case", "story", "experience",
+    "what did", "how did", "why did", "escalation", "resolution"
+  ];
+
+  const queryLower = query.toLowerCase();
+  const hasTranscriptIndicator = transcriptIndicators.some(indicator => 
+    queryLower.includes(indicator)
+  );
+
+  // Always include for certain query types
+  const transcriptQueryTypes = ["quality", "training", "examples", "specific_cases"];
+  const isTranscriptQueryType = transcriptQueryTypes.includes(queryType);
+
+  // Don't include for purely statistical queries
+  const statisticalIndicators = [
+    "average", "total", "count", "how many", "percentage", "rate",
+    "volume", "duration only", "time only", "stats only"
+  ];
+  const isPurelyStatistical = statisticalIndicators.some(indicator => 
+    queryLower.includes(indicator)
+  ) && !hasTranscriptIndicator;
+
+  return (hasTranscriptIndicator || isTranscriptQueryType) && !isPurelyStatistical;
+};
+
+// Score transcript relevance based on query
+const scoreTranscriptRelevance = (record: CallRecord, query: string): number => {
+  let score = 0;
+  const queryLower = query.toLowerCase();
+  const transcript = (record.transcript_text || "").toLowerCase();
+  const summary = (record.call_summary || "").toLowerCase();
+
+  // Keyword matching in transcript (highest weight)
+  const queryWords = queryLower.split(/\s+/).filter(word => word.length > 2);
+  queryWords.forEach(word => {
+    const transcriptMatches = (transcript.match(new RegExp(word, 'gi')) || []).length;
+    const summaryMatches = (summary.match(new RegExp(word, 'gi')) || []).length;
+    score += transcriptMatches * 3 + summaryMatches * 2;
+  });
+
+  // Sentiment alignment
+  const recordSentiment = extractSentiment(record.sentiment_analysis).toLowerCase();
+  if (queryLower.includes(recordSentiment)) {
+    score += 10;
+  }
+
+  // Disposition alignment
+  const disposition = (record.disposition_title || "").toLowerCase();
+  if (queryLower.includes(disposition)) {
+    score += 8;
+  }
+
+  // Category alignment
+  const category = (record.primary_category || "").toLowerCase();
+  if (queryLower.includes(category)) {
+    score += 6;
+  }
+
+  // Boost longer calls for quality analysis
+  const duration = extractNumericValue(record.call_duration);
+  if (queryLower.includes("quality") || queryLower.includes("training")) {
+    if (duration > 300) score += 5; // Calls over 5 minutes
+  }
+
+  // Boost negative sentiment for complaint analysis
+  if (queryLower.includes("complaint") || queryLower.includes("problem")) {
+    if (recordSentiment.includes("negative")) score += 8;
+  }
+
+  return score;
+};
+
+// Extract relevant segments from transcripts
+const extractRelevantSegments = (
+  transcript: string,
+  query: string,
+  maxSegments: number = MAX_SEGMENTS_PER_CALL
+): string[] => {
+  if (!transcript || transcript.trim().length === 0) return [];
+
+  const queryWords = query.toLowerCase().split(/\s+/).filter(word => word.length > 2);
+  const sentences = transcript.split(/[.!?]+/).filter(s => s.trim().length > 10);
+  
+  const scoredSegments = sentences.map((sentence, index) => {
+    let score = 0;
+    const sentenceLower = sentence.toLowerCase();
+    
+    // Score based on query word matches
+    queryWords.forEach(word => {
+      const matches = (sentenceLower.match(new RegExp(word, 'gi')) || []).length;
+      score += matches * 5;
+    });
+    
+    // Boost segments with important keywords
+    const importantPatterns = [
+      /\b(complain|complaint|issue|problem|upset|angry|frustrated)\b/i,
+      /\b(great|excellent|amazing|wonderful|thank|appreciate)\b/i,
+      /\b(sorry|apologize|understand|help|resolve|solution)\b/i,
+      /\b(cancel|refund|escalate|supervisor|manager)\b/i,
+    ];
+    
+    importantPatterns.forEach(pattern => {
+      if (pattern.test(sentence)) score += 3;
+    });
+    
+    // Include some context around high-scoring sentences
+    const segmentStart = Math.max(0, index - 1);
+    const segmentEnd = Math.min(sentences.length - 1, index + 1);
+    const segment = sentences.slice(segmentStart, segmentEnd + 1).join('. ').trim();
+    
+    return {
+      segment: segment.length > MAX_SEGMENT_LENGTH 
+        ? segment.substring(0, MAX_SEGMENT_LENGTH) + "..." 
+        : segment,
+      score,
+      originalIndex: index
+    };
+  });
+
+  return scoredSegments
+    .filter(s => s.score > 0)
+    .sort((a, b) => b.score - a.score)
+    .slice(0, maxSegments)
+    .map(s => s.segment);
+};
+
+// Select most relevant transcript segments within token limits
+const selectRelevantTranscriptSegments = (
+  records: CallRecord[],
+  query: string,
+  maxTokens: number = MAX_TRANSCRIPT_TOKENS
+): TranscriptContext["selectedTranscripts"] => {
+  const recordsWithTranscripts = records
+    .filter(record => record.transcript_text && record.transcript_text.trim().length > 0)
+    .map(record => ({
+      record,
+      relevanceScore: scoreTranscriptRelevance(record, query),
+      segments: extractRelevantSegments(record.transcript_text || "", query)
+    }))
+    .filter(item => item.relevanceScore > 0 && item.segments.length > 0)
+    .sort((a, b) => b.relevanceScore - a.relevanceScore);
+
+  const selectedTranscripts = [];
+  let currentTokens = 0;
+
+  for (const { record, relevanceScore, segments } of recordsWithTranscripts) {
+    // Take the best segments from this call
+    const callSegments = [];
+    
+    for (const segment of segments) {
+      const segmentTokens = Math.ceil(segment.length / TRANSCRIPT_TOKEN_RATIO);
+      
+      if (currentTokens + segmentTokens > maxTokens) break;
+      
+      callSegments.push(segment);
+      currentTokens += segmentTokens;
+      
+      // Stop if we have enough segments from this call
+      if (callSegments.length >= MAX_SEGMENTS_PER_CALL) break;
+    }
+    
+    if (callSegments.length > 0) {
+      selectedTranscripts.push({
+        id: record.id,
+        agent: record.agent_username || "Unknown",
+        disposition: record.disposition_title || "Unknown",
+        sentiment: extractSentiment(record.sentiment_analysis),
+        transcript: callSegments.join(" [...] "), // Join segments with separator
+        summary: record.call_summary || "",
+        relevanceScore
+      });
+    }
+
+    // Limit total number of calls to analyze
+    if (selectedTranscripts.length >= 15 || currentTokens >= maxTokens) break;
+  }
+
+  return selectedTranscripts;
+};
 
 const preprocessCallData = (records: CallRecord[]): ProcessedMetrics => {
   const totalCalls = records.length;
@@ -251,15 +465,17 @@ const preprocessCallData = (records: CallRecord[]): ProcessedMetrics => {
   };
 };
 
-// chunking
+// Enhanced function to prepare context including transcript data
 const prepareContextForQuery = (
   queryType: string,
+  query: string,
   metrics: ProcessedMetrics,
   rawRecords: CallRecord[],
-  maxTokens: number = 100000
-): string => {
+  maxTokens: number = MAX_CONTEXT_TOKENS
+): { context: string; transcriptContext: TranscriptContext } => {
   let context = "";
 
+  // Add basic metrics summary
   context += `## Call Center Analytics Summary\n`;
   context += `**Total Calls Analyzed:** ${metrics.totalCalls.toLocaleString()}\n`;
   context += `**Average Call Duration:** ${Math.round(
@@ -269,6 +485,31 @@ const prepareContextForQuery = (
     metrics.avgHoldTime / 60
   )} minutes ${Math.round(metrics.avgHoldTime % 60)} seconds\n\n`;
 
+  // Determine if we should include transcripts
+  const includeTranscripts = shouldIncludeTranscripts(query, queryType);
+  let selectedTranscripts: TranscriptContext["selectedTranscripts"] = [];
+  const transcriptStats = {
+    totalAvailable: rawRecords.filter(r => r.transcript_text).length,
+    selectedCount: 0,
+    avgLength: 0
+  };
+
+  if (includeTranscripts) {
+    // Calculate available space for transcripts
+    const currentContextTokens = Math.ceil(context.length / TRANSCRIPT_TOKEN_RATIO);
+    const availableTranscriptTokens = Math.min(
+      MAX_TRANSCRIPT_TOKENS,
+      maxTokens - currentContextTokens - 5000 // Reserve space for metrics
+    );
+
+    selectedTranscripts = selectRelevantTranscriptSegments(rawRecords, query, availableTranscriptTokens);
+    transcriptStats.selectedCount = selectedTranscripts.length;
+    transcriptStats.avgLength = selectedTranscripts.length > 0 
+      ? selectedTranscripts.reduce((sum, t) => sum + t.transcript.length, 0) / selectedTranscripts.length
+      : 0;
+  }
+
+  // Add query-specific metrics
   switch (queryType) {
     case "disposition":
       context += `## Disposition Analysis\n`;
@@ -341,7 +582,8 @@ const prepareContextForQuery = (
       break;
 
     case "summary":
-      context += `## Complete Overview\n\n`;
+    default:
+      context += `## Key Metrics Overview\n\n`;
 
       context += `### Top Dispositions\n`;
       Object.entries(metrics.dispositionBreakdown)
@@ -367,38 +609,43 @@ const prepareContextForQuery = (
           } calls, sentiment score: ${data.sentimentScore.toFixed(1)}\n`;
         });
       break;
-
-    default:
-      context += `## Key Metrics Overview\n`;
-      context += `**Top 5 Dispositions:**\n`;
-      Object.entries(metrics.dispositionBreakdown)
-        .sort(([, a], [, b]) => (b as any).count - (a as any).count)
-        .slice(0, 5)
-        .forEach(([disposition, data]) => {
-          context += `- ${disposition}: ${data.percentage.toFixed(1)}%\n`;
-        });
-
-      context += `\n**Sample Call Records:**\n`;
-      rawRecords.slice(0, 5).forEach((record, index) => {
-        context += `${index + 1}. Agent: ${
-          record.agent_username || "Unknown"
-        }, `;
-        context += `Duration: ${Math.round(
-          extractNumericValue(record.call_duration) / 60
-        )}m, `;
-        context += `Disposition: ${record.disposition_title || "Unknown"}\n`;
-      });
   }
 
-  const estimatedTokens = context.length / 4;
+  // Add transcript segments if relevant
+  if (includeTranscripts && selectedTranscripts.length > 0) {
+    context += `\n## Relevant Call Transcript Segments\n`;
+    context += `*Selected key segments from ${selectedTranscripts.length} most relevant calls out of ${transcriptStats.totalAvailable} available*\n\n`;
+
+    selectedTranscripts.forEach((transcript, index) => {
+      context += `### Call ${index + 1} (ID: ${transcript.id})\n`;
+      context += `**Agent:** ${transcript.agent} | **Disposition:** ${transcript.disposition} | **Sentiment:** ${transcript.sentiment}\n`;
+      
+      if (transcript.summary) {
+        context += `**Summary:** ${transcript.summary}\n`;
+      }
+      
+      context += `**Key Segments:** ${transcript.transcript}\n\n`;
+      context += `---\n\n`;
+    });
+  }
+
+  // Final token check and truncation
+  const estimatedTokens = context.length / TRANSCRIPT_TOKEN_RATIO;
   if (estimatedTokens > maxTokens) {
-    const maxChars = maxTokens * 4;
+    const maxChars = maxTokens * TRANSCRIPT_TOKEN_RATIO;
     context =
       context.substring(0, maxChars) +
-      "\n\n[Data truncated due to size limits]";
+      "\n\n[Context truncated due to size limits - analysis based on available data]";
   }
 
-  return context;
+  return {
+    context,
+    transcriptContext: {
+      includeTranscripts,
+      selectedTranscripts,
+      transcriptStats
+    }
+  };
 };
 
 const callOpenAIWithRetry = async (
@@ -437,6 +684,7 @@ const callOpenAIWithRetry = async (
       error?.message?.includes("context_length_exceeded")
     ) {
       if (model === "gpt-4o") {
+        console.log("Context length exceeded, falling back to gpt-4o-mini");
         return callOpenAIWithRetry(messages, "gpt-4o-mini", retryCount);
       }
       throw new Error(
@@ -480,15 +728,30 @@ export async function POST(request: NextRequest) {
     console.log(
       `Processing ${recordsToAnalyze.length} call records for query type: ${queryType}`
     );
+    
+    // Process metrics
     const metrics = preprocessCallData(recordsToAnalyze);
 
-    const context = prepareContextForQuery(
+    // Prepare context with transcript data when relevant
+    const { context, transcriptContext } = prepareContextForQuery(
       queryType || "general",
+      query,
       metrics,
       recordsToAnalyze
     );
 
+    // Enhanced system prompt to handle transcript data
     const systemPrompt = `You are PRISM AI, an expert call center analytics assistant. Analyze the provided call center data and answer questions with precise, actionable insights.
+
+${transcriptContext.includeTranscripts ? 
+`**IMPORTANT: This analysis includes relevant transcript segments from actual calls. When transcript segments are available:**
+- Prioritize insights from actual conversation excerpts over summary statistics
+- Reference specific examples from the provided segments (use quotes for clarity)
+- Identify patterns in customer language, agent responses, and conversation flow
+- Provide specific recommendations based on observed interactions
+- Note that segments are excerpts - full conversations may contain additional context
+- Use segment examples to substantiate your statistical findings` : 
+`**NOTE: This analysis is based on call metrics and metadata only.**`}
 
 Key Guidelines:
 - Provide specific numbers, percentages, and trends
@@ -497,16 +760,23 @@ Key Guidelines:
 - When discussing performance, include both positive insights and improvement opportunities
 - Format responses with clear headers and bullet points for readability
 - If data seems incomplete, mention limitations but still provide valuable insights from available data
+${transcriptContext.includeTranscripts ? '- When referencing transcripts, be specific about which call or agent the example comes from' : ''}
 
 Always structure your response with:
 1. Direct answer to the question
-2. Supporting data/statistics
+2. Supporting data/statistics ${transcriptContext.includeTranscripts ? 'and transcript evidence' : ''}
 3. Key insights or patterns
 4. Actionable recommendations (when relevant)`;
 
     const userPrompt = `Based on the following call center data, please answer this question: "${query}"
 
 ${context}
+
+${transcriptContext.includeTranscripts && transcriptContext.selectedTranscripts.length > 0 ? 
+`**Transcript Segment Analysis:**
+- ${transcriptContext.transcriptStats.selectedCount} calls with relevant transcript segments included
+- Segments are extracted excerpts focused on your query topic
+- Full conversations may contain additional context not shown here` : ''}
 
 Please provide a comprehensive analysis with specific metrics and actionable insights.`;
 
@@ -530,7 +800,16 @@ Please provide a comprehensive analysis with specific metrics and actionable ins
       processingTime,
       queryType,
       hasFullDispositions: fullRecords && fullRecords.length > 0,
-      cacheKey: `${query}_${recordsToAnalyze.length}`,
+      transcriptAnalysis: {
+        included: transcriptContext.includeTranscripts,
+        callsWithSegments: transcriptContext.selectedTranscripts.length,
+        transcriptsAvailable: transcriptContext.transcriptStats.totalAvailable,
+        avgSegmentLength: transcriptContext.selectedTranscripts.length > 0
+          ? Math.round(transcriptContext.selectedTranscripts.reduce((sum, t) => sum + t.transcript.length, 0) / transcriptContext.selectedTranscripts.length)
+          : 0,
+        segmentBased: true
+      },
+      cacheKey: `${query}_${recordsToAnalyze.length}_${transcriptContext.includeTranscripts}`,
     };
 
     return NextResponse.json({
