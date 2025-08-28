@@ -86,9 +86,10 @@ const RATE_LIMIT_CONFIG = {
 // Token management constants
 const MAX_CONTEXT_TOKENS = 100000;
 const TRANSCRIPT_TOKEN_RATIO = 4; // Rough estimate: 4 chars per token
-const MAX_TRANSCRIPT_TOKENS = 15000; // Much smaller allocation for segments
-const MAX_SEGMENT_LENGTH = 300; // Characters per segment
-const MAX_SEGMENTS_PER_CALL = 3; // Maximum segments from each call
+const MAX_TRANSCRIPT_TOKENS = 8000; // Small allocation for 1-3 calls
+const MAX_SEGMENT_LENGTH = 400; // Characters per segment
+const MAX_SEGMENTS_PER_CALL = 4; // Maximum segments from each call
+const MAX_TRANSCRIPT_CALLS = 3; // Only analyze segments from top 3 calls
 
 const extractNumericValue = (value: any): number => {
   if (!value) return 0;
@@ -253,27 +254,35 @@ const extractRelevantSegments = (
     .map(s => s.segment);
 };
 
-// Select most relevant transcript segments within token limits
+// Select segments from the top most relevant calls only (limited by MAX_TRANSCRIPT_CALLS)
 const selectRelevantTranscriptSegments = (
   records: CallRecord[],
   query: string,
   maxTokens: number = MAX_TRANSCRIPT_TOKENS
 ): TranscriptContext["selectedTranscripts"] => {
-  const recordsWithTranscripts = records
+  // First, find the most relevant calls (limited to MAX_TRANSCRIPT_CALLS)
+  const topRelevantCalls = records
     .filter(record => record.transcript_text && record.transcript_text.trim().length > 0)
     .map(record => ({
       record,
-      relevanceScore: scoreTranscriptRelevance(record, query),
-      segments: extractRelevantSegments(record.transcript_text || "", query)
+      relevanceScore: scoreTranscriptRelevance(record, query)
     }))
-    .filter(item => item.relevanceScore > 0 && item.segments.length > 0)
-    .sort((a, b) => b.relevanceScore - a.relevanceScore);
+    .filter(item => item.relevanceScore > 0)
+    .sort((a, b) => b.relevanceScore - a.relevanceScore)
+    .slice(0, MAX_TRANSCRIPT_CALLS); // Limit to maximum allowed transcript calls
+
+  console.log(`Analyzing transcript segments from ${topRelevantCalls.length} calls (max: ${MAX_TRANSCRIPT_CALLS})`);
 
   const selectedTranscripts = [];
   let currentTokens = 0;
 
-  for (const { record, relevanceScore, segments } of recordsWithTranscripts) {
-    // Take the best segments from this call
+  for (const { record, relevanceScore } of topRelevantCalls) {
+    // Extract segments from this call
+    const segments = extractRelevantSegments(record.transcript_text || "", query);
+    
+    if (segments.length === 0) continue;
+
+    // Select segments within remaining token budget
     const callSegments = [];
     
     for (const segment of segments) {
@@ -300,8 +309,8 @@ const selectRelevantTranscriptSegments = (
       });
     }
 
-    // Limit total number of calls to analyze
-    if (selectedTranscripts.length >= 15 || currentTokens >= maxTokens) break;
+    // Exit early if we've used all available tokens
+    if (currentTokens >= maxTokens) break;
   }
 
   return selectedTranscripts;
@@ -613,18 +622,18 @@ const prepareContextForQuery = (
 
   // Add transcript segments if relevant
   if (includeTranscripts && selectedTranscripts.length > 0) {
-    context += `\n## Relevant Call Transcript Segments\n`;
-    context += `*Selected key segments from ${selectedTranscripts.length} most relevant calls out of ${transcriptStats.totalAvailable} available*\n\n`;
+    context += `\n## Key Call Examples (Transcript Segments)\n`;
+    context += `*Showing relevant segments from the ${selectedTranscripts.length} most pertinent calls out of ${transcriptStats.totalAvailable} available*\n\n`;
 
     selectedTranscripts.forEach((transcript, index) => {
-      context += `### Call ${index + 1} (ID: ${transcript.id})\n`;
+      context += `### Example Call ${index + 1} (ID: ${transcript.id})\n`;
       context += `**Agent:** ${transcript.agent} | **Disposition:** ${transcript.disposition} | **Sentiment:** ${transcript.sentiment}\n`;
       
       if (transcript.summary) {
-        context += `**Summary:** ${transcript.summary}\n`;
+        context += `**Call Summary:** ${transcript.summary}\n`;
       }
       
-      context += `**Key Segments:** ${transcript.transcript}\n\n`;
+      context += `**Relevant Excerpts:** ${transcript.transcript}\n\n`;
       context += `---\n\n`;
     });
   }
@@ -650,14 +659,14 @@ const prepareContextForQuery = (
 
 const callOpenAIWithRetry = async (
   messages: any[],
-  model: string = "gpt-4o",
+  model: string = "gpt-4.1",
   retryCount: number = 0
 ): Promise<any> => {
   try {
     const response = await openai.chat.completions.create({
       model,
       messages,
-      max_tokens: 2000,
+      max_tokens: 8000,
       temperature: 0.7,
     });
 
@@ -683,9 +692,9 @@ const callOpenAIWithRetry = async (
       error?.status === 400 &&
       error?.message?.includes("context_length_exceeded")
     ) {
-      if (model === "gpt-4o") {
-        console.log("Context length exceeded, falling back to gpt-4o-mini");
-        return callOpenAIWithRetry(messages, "gpt-4o-mini", retryCount);
+      if (model === "gpt-4.1") {
+        console.log("Context length exceeded, falling back to gpt-4.1");
+        return callOpenAIWithRetry(messages, "gpt-4.1", retryCount);
       }
       throw new Error(
         "Query too complex for available models. Please try a more specific question."
@@ -744,13 +753,22 @@ export async function POST(request: NextRequest) {
     const systemPrompt = `You are PRISM AI, an expert call center analytics assistant. Analyze the provided call center data and answer questions with precise, actionable insights.
 
 ${transcriptContext.includeTranscripts ? 
-`**IMPORTANT: This analysis includes relevant transcript segments from actual calls. When transcript segments are available:**
-- Prioritize insights from actual conversation excerpts over summary statistics
-- Reference specific examples from the provided segments (use quotes for clarity)
-- Identify patterns in customer language, agent responses, and conversation flow
-- Provide specific recommendations based on observed interactions
-- Note that segments are excerpts - full conversations may contain additional context
-- Use segment examples to substantiate your statistical findings` : 
+`**CRITICAL: This analysis includes actual conversation excerpts from call transcripts. When referencing call examples:**
+
+REQUIREMENTS:
+- ONLY quote verbatim text that appears in the provided transcript segments
+- Use exact quotation marks around any transcript content you reference
+- NEVER paraphrase, summarize, or create fictional dialogue examples
+- If you reference what someone said, it must be an exact quote from the provided excerpts
+- Clearly distinguish between actual quoted material and your analytical insights
+- If a transcript segment shows "[...]" that indicates omitted content - do not fill in gaps
+
+ACCEPTABLE: "The customer said 'I'm really frustrated because this is the third time I've called'"
+UNACCEPTABLE: Making up dialogue like "The customer expressed frustration about multiple calls"
+
+- Combine quantitative insights (metrics) with only genuine quoted evidence from transcripts
+- If you cannot find transcript evidence for a point, rely on the statistical data only
+- Always preface transcript quotes with phrases like "In the provided example..." or "The transcript shows..."` : 
 `**NOTE: This analysis is based on call metrics and metadata only.**`}
 
 Key Guidelines:
@@ -773,10 +791,10 @@ Always structure your response with:
 ${context}
 
 ${transcriptContext.includeTranscripts && transcriptContext.selectedTranscripts.length > 0 ? 
-`**Transcript Segment Analysis:**
-- ${transcriptContext.transcriptStats.selectedCount} calls with relevant transcript segments included
-- Segments are extracted excerpts focused on your query topic
-- Full conversations may contain additional context not shown here` : ''}
+`**Call Examples Context:**
+- Included segments from the ${transcriptContext.transcriptStats.selectedCount} most relevant calls (out of ${transcriptContext.transcriptStats.totalAvailable} with transcripts)
+- Only the most pertinent conversation excerpts are shown to illustrate key points
+- Use these examples to support your statistical analysis with real conversation evidence` : ''}
 
 Please provide a comprehensive analysis with specific metrics and actionable insights.`;
 
