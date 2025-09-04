@@ -165,6 +165,16 @@ const CallLogFilters: React.FC<CallLogFiltersProps> = ({
         return "ezgrajewski@tsagroup.com.au";
       case "T10085531@tsagroup.com.au":
         return "hcrooks.tsagroup.com.au";
+        // 
+
+      case "T10085631@tsagroup.com.au":
+        return "stau.tsagroup.com.au";
+      case "T10085726@tsagroup.com.au":
+        return "srowles.tsagroup.com.au";
+      case "T10085656@tsagroup.com.au":
+        return "vsilva.tsagroup.com.au";
+      case "T10085649@tsagroup.com.au":
+        return "lerikli.tsagroup.com.au";
       default:
         return selectedAgent;
     }
@@ -288,6 +298,14 @@ const CallLogFilters: React.FC<CallLogFiltersProps> = ({
                       ? "ezgrajewski@tsagroup.com.au"
                       : agent === "T10085531@tsagroup.com.au"
                       ? "hcrooks.tsagroup.com.au"
+                      : agent === "t10085631@tsagroup.com.au"
+                      ? "stau.tsagroup.com.au"
+                      : agent === "t10085726@tsagroup.com.au"
+                      ? "srowles.tsagroup.com.au"
+                      : agent === "t10085656@tsagroup.com.au"
+                      ? "vsilva.tsagroup.com.au"
+                      : agent === "t10085649@tsagroup.com.au"
+                      ? "lerikli.tsagroup.com.au"
                       : agent}
                   </button>
                 ))}

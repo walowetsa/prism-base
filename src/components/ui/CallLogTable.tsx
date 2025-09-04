@@ -524,6 +524,14 @@ const CallLogTable: React.FC<CallLogTableProps> = ({ className }) => {
                       ? "ezgrajewski@tsagroup.com.au"
                       : record.agent_username === "T10085531@tsagroup.com.au"
                       ? "hcrooks.tsagroup.com.au"
+                      : record.agent_username === "t10085631@tsagroup.com.au"
+                      ? "stau.tsagroup.com.au"
+                      : record.agent_username === "t10085726@tsagroup.com.au"
+                      ? "srowles.tsagroup.com.au"
+                      : record.agent_username === "t10085656@tsagroup.com.au"
+                      ? "vsilva.tsagroup.com.au"
+                      : record.agent_username === "t10085649@tsagroup.com.au"
+                      ? "lerikli.tsagroup.com.au"
                       : record.agent_username}
                   </td>
                   <td className="px-4 py-1 text-sm text-[var(--color-text-primary)] w-64">
