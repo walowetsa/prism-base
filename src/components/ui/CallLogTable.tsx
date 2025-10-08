@@ -6,6 +6,7 @@ import CallLogFilters, { FilterPeriod } from "./CallLogFilters";
 import Link from "next/link";
 import Loader from "../../../public/prism-loader.gif";
 import Image from "next/image";
+import CallRecordsChat from "../ai/CallRecordsChat";
 
 interface CallLogTableProps {
   className?: string;
@@ -29,6 +30,7 @@ interface PaginationData {
 }
 
 const CallLogTable: React.FC<CallLogTableProps> = ({ className }) => {
+  const [showChat, setShowChat] = useState(false);
   const [callRecords, setCallRecords] = useState<CallRecord[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -177,7 +179,6 @@ const CallLogTable: React.FC<CallLogTableProps> = ({ className }) => {
     startDate,
     endDate,
     sortState,
-    fetchCallRecords,
     filtersLoading,
   ]);
 
@@ -663,6 +664,47 @@ const CallLogTable: React.FC<CallLogTableProps> = ({ className }) => {
           </div>
         </div>
       )}
+
+        {/* Modal */}
+        <div className="fixed right-4 bottom-4">
+          <button
+            className="w-12 h-12 rounded-full bg-black flex items-center justify-center hover:scale-110 active:scale-90 cursor-pointer transition"
+            onClick={() => setShowChat(!showChat)}
+          >
+            <svg className="w-8 h-8" viewBox="0 0 24 24" fill="none">
+              <defs>
+                <linearGradient
+                  id="messageGradient"
+                  x1="0%"
+                  y1="0%"
+                  x2="100%"
+                  y2="100%"
+                >
+                  <stop offset="0%" stopColor="var(--color-prism-blue)" />
+                  <stop offset="100%" stopColor="var(--color-prism-orange)" />
+                </linearGradient>
+              </defs>
+              <path
+                d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"
+                stroke="url(#messageGradient)"
+                strokeWidth="2"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              />
+            </svg>
+          </button>
+        </div>
+        {showChat && (
+          <div className="z-[100] fixed bottom-18 right-4 w-[30vw] min-w-[360px] max-w-[640px] h-[90vh] bg-gradient-to-r from-[var(--color-prism-blue)] to-[var(--color-prism-orange)] p-[2px] rounded-lg">
+            <div className="w-full h-full bg-[var(--color-bg-primary)] rounded-lg">
+              <CallRecordsChat
+                filteredRecords={callRecords}
+                totalRecords={callRecords.length}
+                loading={loading}
+              />
+            </div>
+          </div>
+        )}
     </div>
   );
 };
