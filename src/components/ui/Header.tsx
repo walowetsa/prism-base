@@ -6,7 +6,6 @@ import { usePathname } from "next/navigation";
 
 const Header = () => {
   const pathname = usePathname();
-
   return (
     <header className="w-screen bg-[var(--color-bg-secondary)] flex flex-col">
       <div className="px-4 flex items-center">
@@ -38,6 +37,13 @@ const Header = () => {
               </button>
             </Link>
           )}
+            <Link href={"/qa"}>
+              <button className="ml-4 px-3 py-1.5 text-sm border-none rounded-md bg-black/60 text-[var(--color-text-primary)] min-w-[150px] cursor-pointer hover:bg-black/20 transition-colors">
+                <span className="bg-gradient-to-r from-[var(--color-prism-blue)] to-[var(--color-prism-orange)] bg-clip-text text-transparent">
+                  QA View
+                </span>
+              </button>
+            </Link>
         </div>
       </div>
 

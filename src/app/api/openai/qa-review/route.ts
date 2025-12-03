@@ -17,14 +17,6 @@ interface CallRecord {
   transcript_text: string;
   agent_username: string | null;
   initiation_timestamp: string;
-  speaker_data: {
-    speaker: string;
-    text: string;
-    confidence: string;
-    start: number;
-    end: number;
-    speakerRole: string;
-  }[] | null;
   [key: string]: any;
 }
 
@@ -131,11 +123,10 @@ export async function POST(request: NextRequest) {
         continue;
       }
 
-      // Log speaker_data info
+      // Log transcript info
       agentCalls.forEach((call, idx) => {
-        const speakerDataLength = call.speaker_data?.length || 0;
-        const hasAgentSegments = call.speaker_data?.some(s => s.speakerRole?.toLowerCase() === 'agent') || false;
-        console.log(`  Call ${idx + 1}: ID=${call.id}, Speaker segments=${speakerDataLength}, Has agent segments=${hasAgentSegments}`);
+        const transcriptLength = call.transcript_text?.length || 0;
+        console.log(`  Call ${idx + 1}: ID=${call.id}, Transcript length=${transcriptLength}`);
       });
 
       const callAssessments: CallAssessment[] = [];
@@ -145,33 +136,8 @@ export async function POST(request: NextRequest) {
         const call = agentCalls[i];
         console.log(`\nAssessing call ${i + 1}/${agentCalls.length} for ${agent}...`);
         
-        // Extract agent's segments from speaker_data
-        const agentTranscript = extractAgentTranscript(call.speaker_data);
-        
-        if (!agentTranscript || agentTranscript.trim().length === 0) {
-          console.warn(`No agent transcript found in speaker_data for call ${call.id}`);
-          // Create assessment with error message
-          callAssessments.push({
-            callId: call.id,
-            timestamp: call.initiation_timestamp,
-            assessments: criteria.map((criterion) => ({
-              criteriaId: criterion.id,
-              criteriaDescription: criterion.description,
-              type: criterion.type,
-              justification: "No agent speech segments found in this call",
-              ...(criterion.type === "Number" && { score: 5 }),
-              ...(criterion.type !== "Number" && {
-                result: criterion.type === "Boolean" ? "NO" : "Somewhat Satisfactory",
-              }),
-            })),
-          });
-          continue;
-        }
-        
-        console.log(`Agent transcript extracted: ${agentTranscript.length} characters`);
-        
         const assessments = await assessCallWithOpenAI(
-          agentTranscript,
+          call.transcript_text,
           criteria
         );
 
@@ -215,53 +181,6 @@ export async function POST(request: NextRequest) {
   }
 }
 
-interface SpeakerSegment {
-  speaker: string;
-  text: string;
-  confidence: string;
-  start: number;
-  end: number;
-  speakerRole: string;
-}
-
-function extractAgentTranscript(speaker_data: SpeakerSegment[] | null): string {
-  if (!speaker_data || speaker_data.length === 0) {
-    console.warn("No speaker_data available");
-    return "";
-  }
-
-  console.log(`Total speaker segments: ${speaker_data.length}`);
-  
-  // Filter for agent segments (case-insensitive)
-  const agentSegments = speaker_data.filter(segment => 
-    segment.speakerRole && 
-    segment.speakerRole.toLowerCase() === 'agent'
-  );
-
-  console.log(`Agent segments found: ${agentSegments.length}`);
-  
-  if (agentSegments.length === 0) {
-    console.warn("No segments with speakerRole='Agent' found");
-    // Log the roles that were found for debugging
-    const roles = [...new Set(speaker_data.map(s => s.speakerRole))];
-    console.log("Available speaker roles:", roles);
-    return "";
-  }
-
-  // Sort by start time to maintain chronological order
-  const sortedSegments = agentSegments.sort((a, b) => a.start - b.start);
-
-  // Combine text segments
-  const transcript = sortedSegments
-    .map(segment => segment.text.trim())
-    .filter(text => text.length > 0)
-    .join(" ");
-
-  console.log(`Combined agent transcript: ${transcript.length} characters from ${sortedSegments.length} segments`);
-
-  return transcript;
-}
-
 async function assessCallWithOpenAI(
   transcript: string,
   criteria: Criteria[]
@@ -284,22 +203,20 @@ async function assessCallWithOpenAI(
   console.log(`Assessing transcript (${transcript.length} chars) with ${criteria.length} criteria`);
 
   // Build the assessment prompt with clear JSON structure
-  const prompt = `You are a quality assurance expert reviewing customer service calls.
+  const prompt = `You are a quality assurance expert reviewing customer service call transcripts. 
 
-The following transcript contains ONLY the agent's speech segments from a customer service call (customer responses have been filtered out).
+Analyze the following call transcript and assess it based on the criteria below.
 
-AGENT'S TRANSCRIPT:
+TRANSCRIPT:
 ${transcript}
 
 ASSESSMENT CRITERIA:
-Assess the agent's performance based on the following criteria. Remember, you are ONLY seeing what the agent said, not the customer's responses.
-
 ${criteria.map((c, index) => {
   let instruction = "";
   if (c.type === "Number") {
     instruction = `Score from 1-10 and provide justification`;
   } else if (c.type === "Boolean") {
-    instruction = `Answer YES or NO and provide a relevant excerpt from the agent's speech that supports your answer`;
+    instruction = `Answer YES or NO and provide a relevant transcript excerpt that supports your answer`;
   } else if (c.type === "String") {
     instruction = `Answer with "Unsatisfactory", "Somewhat Satisfactory", or "Very Satisfactory" and provide justification`;
   }
@@ -341,7 +258,7 @@ For String type:
         {
           role: "system",
           content:
-            "You are a quality assurance expert assessing customer service agents. You will receive transcripts containing ONLY the agent's speech (customer responses are filtered out). Provide objective, detailed assessments based on what the agent said. Always format your response as valid JSON.",
+            "You are a quality assurance expert. Provide objective, detailed assessments of customer service calls based on specific criteria. Always format your response as valid JSON.",
         },
         {
           role: "user",
