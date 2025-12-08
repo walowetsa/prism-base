@@ -1,465 +1,570 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import { NextRequest, NextResponse } from "next/server";
 import OpenAI from "openai";
+interface CallRecord {
+  id: string;
+  agent_username?: string;
+  queue_name?: string;
+  call_duration?: any;
+  disposition_title?: string;
+  sentiment_analysis?: any;
+  primary_category?: string;
+  initiation_timestamp?: string;
+  total_hold_time?: any;
+  [key: string]: any;
+}
+
+interface ProcessedMetrics {
+  totalCalls: number;
+  avgCallDuration: number;
+  avgHoldTime: number;
+  dispositionBreakdown: Record<string, { count: number; percentage: number }>;
+  sentimentBreakdown: Record<string, { count: number; percentage: number }>;
+  agentMetrics: Record<
+    string,
+    {
+      totalCalls: number;
+      avgDuration: number;
+      avgHoldTime: number;
+      topDispositions: string[];
+      sentimentScore: number;
+    }
+  >;
+  queueMetrics: Record<
+    string,
+    {
+      totalCalls: number;
+      avgDuration: number;
+      avgWaitTime: number;
+      topDispositions: string[];
+    }
+  >;
+  timePatterns: {
+    hourlyDistribution: Record<string, number>;
+    dailyTrends: Record<string, number>;
+  };
+  performanceIndicators: {
+    callsOver15Min: number;
+    callsUnder2Min: number;
+    abandonmentRate: number;
+    firstCallResolution: number;
+  };
+}
 
 const openai = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY,
 });
 
-interface Criteria {
-  id: number;
-  description: string;
-  type: "Number" | "Boolean" | "String";
-}
+const RATE_LIMIT_CONFIG = {
+  maxRetries: 5,
+  baseDelay: 1000, //
+  maxDelay: 30000,
+  backoffMultiplier: 2,
+};
 
-interface CallRecord {
-  id: string;
-  contact_id: string;
-  transcript_text: string;
-  agent_username: string | null;
-  initiation_timestamp: string;
-  speaker_data: {
-    speaker: string;
-    text: string;
-    confidence: string;
-    start: number;
-    end: number;
-    speakerRole: string;
-  }[] | null;
-  [key: string]: any;
-}
-
-interface AssessmentResult {
-  criteriaId: number;
-  criteriaDescription: string;
-  type: string;
-  score?: number; // For Number type (1-10)
-  result?: string; // For Boolean (YES/NO) or String (Unsatisfactory/Somewhat Satisfactory/Very Satisfactory)
-  justification: string;
-  transcriptExcerpt?: string; // For Boolean type
-}
-
-interface CallAssessment {
-  callId: string;
-  timestamp: string;
-  assessments: AssessmentResult[];
-}
-
-interface AgentReport {
-  agentUsername: string;
-  callsReviewed: number;
-  callAssessments: CallAssessment[];
-  summary: {
-    averageScores: { [key: string]: number };
-    overallAssessment: string;
-  };
-}
-
-export async function POST(request: NextRequest) {
-  try {
-    const body = await request.json();
-    const {
-      criteria,
-      selectedAgents,
-      callRecords,
-      numberOfCalls,
-    }: {
-      criteria: Criteria[];
-      selectedAgents: string[];
-      callRecords: CallRecord[];
-      numberOfCalls: number;
-    } = body;
-
-    console.log("=== QA Review Request Started ===");
-    console.log(`Criteria count: ${criteria?.length || 0}`);
-    console.log(`Selected agents: ${selectedAgents?.join(", ") || "none"}`);
-    console.log(`Call records received: ${callRecords?.length || 0}`);
-    console.log(`Number of calls per agent: ${numberOfCalls}`);
-
-    // Validate input
-    if (!criteria || criteria.length === 0) {
-      return NextResponse.json(
-        { error: "No criteria provided" },
-        { status: 400 }
-      );
-    }
-
-    if (!selectedAgents || selectedAgents.length === 0) {
-      return NextResponse.json(
-        { error: "No agents selected" },
-        { status: 400 }
-      );
-    }
-
-    if (!callRecords || callRecords.length === 0) {
-      return NextResponse.json(
-        { error: "No call records provided" },
-        { status: 400 }
-      );
-    }
-
-    if (!numberOfCalls || numberOfCalls < 1) {
-      return NextResponse.json(
-        { error: "Invalid number of calls" },
-        { status: 400 }
-      );
-    }
-
-    const agentReports: AgentReport[] = [];
-
-    // Process each agent
-    for (const agent of selectedAgents) {
-      console.log(`\n--- Processing agent: ${agent} ---`);
-      
-      // Filter call records for this agent and limit to numberOfCalls
-      const agentCalls = callRecords
-        .filter((call) => call.agent_username === agent)
-        .slice(0, numberOfCalls);
-
-      console.log(`Found ${agentCalls.length} calls for ${agent}`);
-
-      if (agentCalls.length === 0) {
-        console.log(`No calls found for ${agent}`);
-        agentReports.push({
-          agentUsername: agent,
-          callsReviewed: 0,
-          callAssessments: [],
-          summary: {
-            averageScores: {},
-            overallAssessment: "No calls found for this agent in the specified period.",
-          },
-        });
-        continue;
-      }
-
-      // Log speaker_data info
-      agentCalls.forEach((call, idx) => {
-        const speakerDataLength = call.speaker_data?.length || 0;
-        const hasAgentSegments = call.speaker_data?.some(s => s.speakerRole?.toLowerCase() === 'agent') || false;
-        console.log(`  Call ${idx + 1}: ID=${call.id}, Speaker segments=${speakerDataLength}, Has agent segments=${hasAgentSegments}`);
-      });
-
-      const callAssessments: CallAssessment[] = [];
-
-      // Process each call
-      for (let i = 0; i < agentCalls.length; i++) {
-        const call = agentCalls[i];
-        console.log(`\nAssessing call ${i + 1}/${agentCalls.length} for ${agent}...`);
-        
-        // Extract agent's segments from speaker_data
-        const agentTranscript = extractAgentTranscript(call.speaker_data);
-        
-        if (!agentTranscript || agentTranscript.trim().length === 0) {
-          console.warn(`No agent transcript found in speaker_data for call ${call.id}`);
-          // Create assessment with error message
-          callAssessments.push({
-            callId: call.id,
-            timestamp: call.initiation_timestamp,
-            assessments: criteria.map((criterion) => ({
-              criteriaId: criterion.id,
-              criteriaDescription: criterion.description,
-              type: criterion.type,
-              justification: "No agent speech segments found in this call",
-              ...(criterion.type === "Number" && { score: 5 }),
-              ...(criterion.type !== "Number" && {
-                result: criterion.type === "Boolean" ? "NO" : "Somewhat Satisfactory",
-              }),
-            })),
-          });
-          continue;
-        }
-        
-        console.log(`Agent transcript extracted: ${agentTranscript.length} characters`);
-        
-        const assessments = await assessCallWithOpenAI(
-          agentTranscript,
-          criteria
-        );
-
-        callAssessments.push({
-          callId: call.id,
-          timestamp: call.initiation_timestamp,
-          assessments,
-        });
-      }
-
-      // Calculate summary
-      const summary = calculateAgentSummary(callAssessments, criteria);
-
-      agentReports.push({
-        agentUsername: agent,
-        callsReviewed: agentCalls.length,
-        callAssessments,
-        summary,
-      });
-
-      console.log(`Completed processing ${agentCalls.length} calls for ${agent}`);
-    }
-
-    console.log("\n=== QA Review Request Completed ===");
-    console.log(`Total agents processed: ${agentReports.length}`);
-    console.log(`Total calls assessed: ${agentReports.reduce((sum, r) => sum + r.callsReviewed, 0)}`);
-
-    return NextResponse.json({
-      success: true,
-      reports: agentReports,
-    });
-  } catch (error) {
-    console.error("Error in QA assessment:", error);
-    return NextResponse.json(
-      {
-        error: "Failed to process QA assessment",
-        details: error instanceof Error ? error.message : "Unknown error",
-      },
-      { status: 500 }
-    );
+const extractNumericValue = (value: any): number => {
+  if (!value) return 0;
+  if (typeof value === "number") return value;
+  if (
+    typeof value === "object" &&
+    value.minutes !== undefined &&
+    value.seconds !== undefined
+  ) {
+    return value.minutes * 60 + value.seconds;
   }
-}
-
-interface SpeakerSegment {
-  speaker: string;
-  text: string;
-  confidence: string;
-  start: number;
-  end: number;
-  speakerRole: string;
-}
-
-function extractAgentTranscript(speaker_data: SpeakerSegment[] | null): string {
-  if (!speaker_data || speaker_data.length === 0) {
-    console.warn("No speaker_data available");
-    return "";
+  if (typeof value === "string") {
+    const parsed = parseFloat(value);
+    return isNaN(parsed) ? 0 : parsed;
   }
+  return 0;
+};
 
-  console.log(`Total speaker segments: ${speaker_data.length}`);
-  
-  // Filter for agent segments (case-insensitive)
-  const agentSegments = speaker_data.filter(segment => 
-    segment.speakerRole && 
-    segment.speakerRole.toLowerCase() === 'agent'
-  );
-
-  console.log(`Agent segments found: ${agentSegments.length}`);
-  
-  if (agentSegments.length === 0) {
-    console.warn("No segments with speakerRole='Agent' found");
-    // Log the roles that were found for debugging
-    const roles = [...new Set(speaker_data.map(s => s.speakerRole))];
-    console.log("Available speaker roles:", roles);
-    return "";
+const extractSentiment = (sentimentAnalysis: any): string => {
+  if (!sentimentAnalysis) return "Unknown";
+  if (Array.isArray(sentimentAnalysis) && sentimentAnalysis.length > 0) {
+    return sentimentAnalysis[0].sentiment || "Unknown";
   }
-
-  // Sort by start time to maintain chronological order
-  const sortedSegments = agentSegments.sort((a, b) => a.start - b.start);
-
-  // Combine text segments
-  const transcript = sortedSegments
-    .map(segment => segment.text.trim())
-    .filter(text => text.length > 0)
-    .join(" ");
-
-  console.log(`Combined agent transcript: ${transcript.length} characters from ${sortedSegments.length} segments`);
-
-  return transcript;
-}
-
-async function assessCallWithOpenAI(
-  transcript: string,
-  criteria: Criteria[]
-): Promise<AssessmentResult[]> {
-  // Check if transcript is empty
-  if (!transcript || transcript.trim().length === 0) {
-    console.warn("Empty transcript provided");
-    return criteria.map((criterion) => ({
-      criteriaId: criterion.id,
-      criteriaDescription: criterion.description,
-      type: criterion.type,
-      justification: "Transcript is empty or unavailable",
-      ...(criterion.type === "Number" && { score: 5 }),
-      ...(criterion.type !== "Number" && {
-        result: criterion.type === "Boolean" ? "NO" : "Somewhat Satisfactory",
-      }),
-    }));
+  if (typeof sentimentAnalysis === "string") return sentimentAnalysis;
+  if (typeof sentimentAnalysis === "object" && sentimentAnalysis.sentiment) {
+    return sentimentAnalysis.sentiment;
   }
+  return "Unknown";
+};
 
-  console.log(`Assessing transcript (${transcript.length} chars) with ${criteria.length} criteria`);
+const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
 
-  // Build the assessment prompt with clear JSON structure
-  const prompt = `You are a quality assurance expert reviewing customer service calls.
+const preprocessCallData = (records: CallRecord[]): ProcessedMetrics => {
+  const totalCalls = records.length;
+  let totalDuration = 0;
+  let totalHoldTime = 0;
+  let callsOver15Min = 0;
+  let callsUnder2Min = 0;
 
-The following transcript contains ONLY the agent's speech segments from a customer service call (customer responses have been filtered out).
+  const dispositions: Record<string, number> = {};
+  const sentiments: Record<string, number> = {};
+  const agentStats: Record<string, any> = {};
+  const queueStats: Record<string, any> = {};
+  const hourlyDistribution: Record<string, number> = {};
+  const dailyTrends: Record<string, number> = {};
 
-AGENT'S TRANSCRIPT:
-${transcript}
+  records.forEach((record) => {
+    const duration = extractNumericValue(record.call_duration);
+    const holdTime = extractNumericValue(record.total_hold_time);
 
-ASSESSMENT CRITERIA:
-Assess the agent's performance based on the following criteria. Remember, you are ONLY seeing what the agent said, not the customer's responses.
+    totalDuration += duration;
+    totalHoldTime += holdTime;
 
-${criteria.map((c, index) => {
-  let instruction = "";
-  if (c.type === "Number") {
-    instruction = `Score from 1-10 and provide justification`;
-  } else if (c.type === "Boolean") {
-    instruction = `Answer YES or NO and provide a relevant excerpt from the agent's speech that supports your answer`;
-  } else if (c.type === "String") {
-    instruction = `Answer with "Unsatisfactory", "Somewhat Satisfactory", or "Very Satisfactory" and provide justification`;
-  }
-  return `${index + 1}. ${c.description} (${c.type}): ${instruction}`;
-}).join("\n")}
+    if (duration > 900) callsOver15Min++;
+    if (duration < 120) callsUnder2Min++;
 
-IMPORTANT: Respond with a JSON object where each criterion is a key using the format "criterion_N" where N is the criterion number (1, 2, 3, etc.).
+    const disposition = record.disposition_title || "Unknown";
+    dispositions[disposition] = (dispositions[disposition] || 0) + 1;
 
-For Number type:
-{
-  "criterion_1": {
-    "score": <number 1-10>,
-    "justification": "<your reasoning>"
-  }
-}
+    const sentiment = extractSentiment(record.sentiment_analysis);
+    sentiments[sentiment] = (sentiments[sentiment] || 0) + 1;
 
-For Boolean type:
-{
-  "criterion_1": {
-    "result": "<YES or NO>",
-    "excerpt": "<relevant quote from transcript>",
-    "justification": "<your reasoning>"
-  }
-}
-
-For String type:
-{
-  "criterion_1": {
-    "result": "<Unsatisfactory or Somewhat Satisfactory or Very Satisfactory>",
-    "justification": "<your reasoning>"
-  }
-}`;
-
-  try {
-    console.log("Sending request to OpenAI...");
-    const completion = await openai.chat.completions.create({
-      model: "gpt-4o",
-      messages: [
-        {
-          role: "system",
-          content:
-            "You are a quality assurance expert assessing customer service agents. You will receive transcripts containing ONLY the agent's speech (customer responses are filtered out). Provide objective, detailed assessments based on what the agent said. Always format your response as valid JSON.",
-        },
-        {
-          role: "user",
-          content: prompt,
-        },
-      ],
-      response_format: { type: "json_object" },
-      temperature: 0.3,
-    });
-
-    const response = completion.choices[0].message.content;
-    if (!response) {
-      throw new Error("Empty response from OpenAI");
-    }
-
-    console.log("Received response from OpenAI, parsing...");
-    
-    // Parse the response
-    const parsed = JSON.parse(response);
-    console.log("Parsed OpenAI response:", JSON.stringify(parsed, null, 2));
-
-    // Convert to our AssessmentResult format
-    const results: AssessmentResult[] = criteria.map((criterion, index) => {
-      const criterionKey = `criterion_${index + 1}`;
-      const assessment = parsed[criterionKey];
-
-      if (!assessment) {
-        console.warn(`No assessment found for ${criterionKey}`);
-        return {
-          criteriaId: criterion.id,
-          criteriaDescription: criterion.description,
-          type: criterion.type,
-          justification: "Assessment not provided by AI",
-          ...(criterion.type === "Number" && { score: 5 }),
-          ...(criterion.type !== "Number" && {
-            result: criterion.type === "Boolean" ? "NO" : "Somewhat Satisfactory",
-          }),
-        };
-      }
-
-      let result: AssessmentResult = {
-        criteriaId: criterion.id,
-        criteriaDescription: criterion.description,
-        type: criterion.type,
-        justification: assessment.justification || "No justification provided",
+    const agent = record.agent_username || "Unknown";
+    if (!agentStats[agent]) {
+      agentStats[agent] = {
+        totalCalls: 0,
+        totalDuration: 0,
+        totalHoldTime: 0,
+        dispositions: {},
+        sentiments: {},
       };
+    }
+    agentStats[agent].totalCalls++;
+    agentStats[agent].totalDuration += duration;
+    agentStats[agent].totalHoldTime += holdTime;
+    agentStats[agent].dispositions[disposition] =
+      (agentStats[agent].dispositions[disposition] || 0) + 1;
+    agentStats[agent].sentiments[sentiment] =
+      (agentStats[agent].sentiments[sentiment] || 0) + 1;
 
-      if (criterion.type === "Number") {
-        result.score = assessment.score || 5;
-      } else if (criterion.type === "Boolean") {
-        result.result = assessment.result || "NO";
-        result.transcriptExcerpt = assessment.excerpt || "";
-      } else if (criterion.type === "String") {
-        result.result = assessment.result || "Somewhat Satisfactory";
-      }
+    const queue = record.queue_name || "Unknown";
+    if (!queueStats[queue]) {
+      queueStats[queue] = {
+        totalCalls: 0,
+        totalDuration: 0,
+        totalWaitTime: 0,
+        dispositions: {},
+      };
+    }
+    queueStats[queue].totalCalls++;
+    queueStats[queue].totalDuration += duration;
+    queueStats[queue].totalWaitTime += holdTime;
+    queueStats[queue].dispositions[disposition] =
+      (queueStats[queue].dispositions[disposition] || 0) + 1;
 
-      return result;
-    });
+    if (record.initiation_timestamp) {
+      const date = new Date(record.initiation_timestamp);
+      const hour = date.getHours();
+      const day = date.toDateString();
 
-    console.log(`Successfully assessed ${results.length} criteria`);
-    return results;
-  } catch (error) {
-    console.error("OpenAI assessment error:", error);
-    // Return default assessments on error
-    return criteria.map((criterion) => ({
-      criteriaId: criterion.id,
-      criteriaDescription: criterion.description,
-      type: criterion.type,
-      justification: `Error during assessment: ${error instanceof Error ? error.message : "Unknown error"}`,
-      ...(criterion.type === "Number" && { score: 5 }),
-      ...(criterion.type !== "Number" && {
-        result: criterion.type === "Boolean" ? "NO" : "Somewhat Satisfactory",
-      }),
-    }));
-  }
-}
-
-function calculateAgentSummary(
-  callAssessments: CallAssessment[],
-  criteria: Criteria[]
-) {
-  const averageScores: { [key: string]: number } = {};
-
-  // Calculate average scores for Number type criteria
-  criteria.forEach((criterion) => {
-    if (criterion.type === "Number") {
-      const scores = callAssessments.flatMap((call) =>
-        call.assessments
-          .filter((a) => a.criteriaId === criterion.id && a.score)
-          .map((a) => a.score!)
-      );
-
-      if (scores.length > 0) {
-        const average = scores.reduce((a, b) => a + b, 0) / scores.length;
-        averageScores[criterion.description] = Math.round(average * 10) / 10;
-      }
+      hourlyDistribution[hour] = (hourlyDistribution[hour] || 0) + 1;
+      dailyTrends[day] = (dailyTrends[day] || 0) + 1;
     }
   });
 
-  // Generate overall assessment
-  const totalCalls = callAssessments.length;
-  const avgScore =
-    Object.values(averageScores).reduce((a, b) => a + b, 0) /
-    Object.values(averageScores).length;
+  const dispositionBreakdown: Record<
+    string,
+    { count: number; percentage: number }
+  > = {};
+  Object.entries(dispositions).forEach(([key, count]) => {
+    dispositionBreakdown[key] = {
+      count,
+      percentage: (count / totalCalls) * 100,
+    };
+  });
 
-  let overallAssessment = "";
-  if (avgScore >= 8) {
-    overallAssessment = `Excellent performance across ${totalCalls} calls reviewed. Agent consistently meets or exceeds quality standards.`;
-  } else if (avgScore >= 6) {
-    overallAssessment = `Good performance across ${totalCalls} calls reviewed. Agent generally meets quality standards with room for improvement.`;
-  } else if (avgScore >= 4) {
-    overallAssessment = `Fair performance across ${totalCalls} calls reviewed. Agent needs improvement in several areas.`;
-  } else {
-    overallAssessment = `Below expectations across ${totalCalls} calls reviewed. Agent requires significant coaching and support.`;
-  }
+  const sentimentBreakdown: Record<
+    string,
+    { count: number; percentage: number }
+  > = {};
+  Object.entries(sentiments).forEach(([key, count]) => {
+    sentimentBreakdown[key] = {
+      count,
+      percentage: (count / totalCalls) * 100,
+    };
+  });
+
+  const agentMetrics: Record<string, any> = {};
+  Object.entries(agentStats).forEach(([agent, stats]) => {
+    const topDispositions = Object.entries(stats.dispositions)
+      .sort(([, a], [, b]) => (b as number) - (a as number))
+      .slice(0, 3)
+      .map(([disp]) => disp);
+
+    const positiveCount = stats.sentiments["Positive"] || 0;
+    const negativeCount = stats.sentiments["Negative"] || 0;
+    const sentimentScore =
+      stats.totalCalls > 0
+        ? ((positiveCount - negativeCount) / stats.totalCalls) * 100
+        : 0;
+
+    agentMetrics[agent] = {
+      totalCalls: stats.totalCalls,
+      avgDuration:
+        stats.totalCalls > 0 ? stats.totalDuration / stats.totalCalls : 0,
+      avgHoldTime:
+        stats.totalCalls > 0 ? stats.totalHoldTime / stats.totalCalls : 0,
+      topDispositions,
+      sentimentScore,
+    };
+  });
+
+  const queueMetrics: Record<string, any> = {};
+  Object.entries(queueStats).forEach(([queue, stats]) => {
+    const topDispositions = Object.entries(stats.dispositions)
+      .sort(([, a], [, b]) => (b as number) - (a as number))
+      .slice(0, 3)
+      .map(([disp]) => disp);
+
+    queueMetrics[queue] = {
+      totalCalls: stats.totalCalls,
+      avgDuration:
+        stats.totalCalls > 0 ? stats.totalDuration / stats.totalCalls : 0,
+      avgWaitTime:
+        stats.totalCalls > 0 ? stats.totalWaitTime / stats.totalCalls : 0,
+      topDispositions,
+    };
+  });
 
   return {
-    averageScores,
-    overallAssessment,
+    totalCalls,
+    avgCallDuration: totalCalls > 0 ? totalDuration / totalCalls : 0,
+    avgHoldTime: totalCalls > 0 ? totalHoldTime / totalCalls : 0,
+    dispositionBreakdown,
+    sentimentBreakdown,
+    agentMetrics,
+    queueMetrics,
+    timePatterns: {
+      hourlyDistribution,
+      dailyTrends,
+    },
+    performanceIndicators: {
+      callsOver15Min,
+      callsUnder2Min,
+      abandonmentRate: 0,
+      firstCallResolution: 0,
+    },
   };
+};
+
+// chunking
+const prepareContextForQuery = (
+  queryType: string,
+  metrics: ProcessedMetrics,
+  rawRecords: CallRecord[],
+  maxTokens: number = 100000
+): string => {
+  let context = "";
+
+  context += `## Call Center Analytics Summary\n`;
+  context += `**Total Calls Analyzed:** ${metrics.totalCalls.toLocaleString()}\n`;
+  context += `**Average Call Duration:** ${Math.round(
+    metrics.avgCallDuration / 60
+  )} minutes ${Math.round(metrics.avgCallDuration % 60)} seconds\n`;
+  context += `**Average Hold Time:** ${Math.round(
+    metrics.avgHoldTime / 60
+  )} minutes ${Math.round(metrics.avgHoldTime % 60)} seconds\n\n`;
+
+  switch (queryType) {
+    case "disposition":
+      context += `## Disposition Analysis\n`;
+      Object.entries(metrics.dispositionBreakdown)
+        .sort(([, a], [, b]) => (b as any).count - (a as any).count)
+        .forEach(([disposition, data]) => {
+          context += `**${disposition}:** ${
+            data.count
+          } calls (${data.percentage.toFixed(1)}%)\n`;
+        });
+      break;
+
+    case "agent_performance":
+      context += `## Agent Performance Metrics\n`;
+      Object.entries(metrics.agentMetrics)
+        .sort(([, a], [, b]) => (b as any).totalCalls - (a as any).totalCalls)
+        .slice(0, 20)
+        .forEach(([agent, data]) => {
+          context += `**${agent}:**\n`;
+          context += `- Calls: ${data.totalCalls}\n`;
+          context += `- Avg Duration: ${Math.round(
+            data.avgDuration / 60
+          )}m ${Math.round(data.avgDuration % 60)}s\n`;
+          context += `- Sentiment Score: ${data.sentimentScore.toFixed(1)}\n`;
+          context += `- Top Dispositions: ${data.topDispositions.join(
+            ", "
+          )}\n\n`;
+        });
+      break;
+
+    case "sentiment":
+      context += `## Sentiment Analysis\n`;
+      Object.entries(metrics.sentimentBreakdown)
+        .sort(([, a], [, b]) => (b as any).count - (a as any).count)
+        .forEach(([sentiment, data]) => {
+          context += `**${sentiment}:** ${
+            data.count
+          } calls (${data.percentage.toFixed(1)}%)\n`;
+        });
+      break;
+
+    case "queue_analysis":
+      context += `## Queue Performance\n`;
+      Object.entries(metrics.queueMetrics)
+        .sort(([, a], [, b]) => (b as any).totalCalls - (a as any).totalCalls)
+        .forEach(([queue, data]) => {
+          context += `**${queue}:**\n`;
+          context += `- Calls: ${data.totalCalls}\n`;
+          context += `- Avg Duration: ${Math.round(
+            data.avgDuration / 60
+          )}m ${Math.round(data.avgDuration % 60)}s\n`;
+          context += `- Avg Wait: ${Math.round(
+            data.avgWaitTime / 60
+          )}m ${Math.round(data.avgWaitTime % 60)}s\n`;
+          context += `- Top Dispositions: ${data.topDispositions.join(
+            ", "
+          )}\n\n`;
+        });
+      break;
+
+    case "timing":
+      context += `## Time Pattern Analysis\n`;
+      context += `**Hourly Distribution (Top 10):**\n`;
+      Object.entries(metrics.timePatterns.hourlyDistribution)
+        .sort(([, a], [, b]) => (b as number) - (a as number))
+        .slice(0, 10)
+        .forEach(([hour, count]) => {
+          context += `- ${hour}:00: ${count} calls\n`;
+        });
+      break;
+
+    case "summary":
+      context += `## Complete Overview\n\n`;
+
+      context += `### Top Dispositions\n`;
+      Object.entries(metrics.dispositionBreakdown)
+        .sort(([, a], [, b]) => (b as any).count - (a as any).count)
+        .slice(0, 10)
+        .forEach(([disposition, data]) => {
+          context += `- ${disposition}: ${
+            data.count
+          } (${data.percentage.toFixed(1)}%)\n`;
+        });
+
+      context += `\n### Performance Indicators\n`;
+      context += `- Calls over 15 minutes: ${metrics.performanceIndicators.callsOver15Min}\n`;
+      context += `- Calls under 2 minutes: ${metrics.performanceIndicators.callsUnder2Min}\n`;
+
+      context += `\n### Top Performing Agents (by call volume)\n`;
+      Object.entries(metrics.agentMetrics)
+        .sort(([, a], [, b]) => (b as any).totalCalls - (a as any).totalCalls)
+        .slice(0, 5)
+        .forEach(([agent, data]) => {
+          context += `- ${agent}: ${
+            data.totalCalls
+          } calls, sentiment score: ${data.sentimentScore.toFixed(1)}\n`;
+        });
+      break;
+
+    default:
+      context += `## Key Metrics Overview\n`;
+      context += `**Top 5 Dispositions:**\n`;
+      Object.entries(metrics.dispositionBreakdown)
+        .sort(([, a], [, b]) => (b as any).count - (a as any).count)
+        .slice(0, 5)
+        .forEach(([disposition, data]) => {
+          context += `- ${disposition}: ${data.percentage.toFixed(1)}%\n`;
+        });
+
+      context += `\n**Sample Call Records:**\n`;
+      rawRecords.slice(0, 5).forEach((record, index) => {
+        context += `${index + 1}. Agent: ${
+          record.agent_username || "Unknown"
+        }, `;
+        context += `Duration: ${Math.round(
+          extractNumericValue(record.call_duration) / 60
+        )}m, `;
+        context += `Disposition: ${record.disposition_title || "Unknown"}\n`;
+      });
+  }
+
+  const estimatedTokens = context.length / 4;
+  if (estimatedTokens > maxTokens) {
+    const maxChars = maxTokens * 4;
+    context =
+      context.substring(0, maxChars) +
+      "\n\n[Data truncated due to size limits]";
+  }
+
+  return context;
+};
+
+const callOpenAIWithRetry = async (
+  messages: any[],
+  model: string = "gpt-4o",
+  retryCount: number = 0
+): Promise<any> => {
+  try {
+    const response = await openai.chat.completions.create({
+      model,
+      messages,
+      max_tokens: 2000,
+      temperature: 0.7,
+    });
+
+    return response;
+  } catch (error: any) {
+    if (error?.status === 429 && retryCount < RATE_LIMIT_CONFIG.maxRetries) {
+      const delay = Math.min(
+        RATE_LIMIT_CONFIG.baseDelay *
+          Math.pow(RATE_LIMIT_CONFIG.backoffMultiplier, retryCount),
+        RATE_LIMIT_CONFIG.maxDelay
+      );
+
+      console.log(
+        `Rate limited. Retrying in ${delay}ms (attempt ${retryCount + 1}/${
+          RATE_LIMIT_CONFIG.maxRetries
+        })`
+      );
+      await sleep(delay);
+      return callOpenAIWithRetry(messages, model, retryCount + 1);
+    }
+
+    if (
+      error?.status === 400 &&
+      error?.message?.includes("context_length_exceeded")
+    ) {
+      if (model === "gpt-4o") {
+        return callOpenAIWithRetry(messages, "gpt-4o-mini", retryCount);
+      }
+      throw new Error(
+        "Query too complex for available models. Please try a more specific question."
+      );
+    }
+
+    throw error;
+  }
+};
+
+export async function POST(request: NextRequest) {
+  try {
+    const { query, callData, queryType, fullRecords } = await request.json();
+
+    if (!query) {
+      return NextResponse.json({ error: "Query is required" }, { status: 400 });
+    }
+
+    if (!process.env.OPENAI_API_KEY) {
+      return NextResponse.json(
+        { error: "OpenAI API key not configured" },
+        { status: 500 }
+      );
+    }
+
+    const recordsToAnalyze =
+      fullRecords && fullRecords.length > 0
+        ? fullRecords
+        : callData?.data?.sampleRecords || [];
+
+    if (!recordsToAnalyze || recordsToAnalyze.length === 0) {
+      return NextResponse.json(
+        {
+          error: "No call records available for analysis",
+        },
+        { status: 400 }
+      );
+    }
+
+    console.log(
+      `Processing ${recordsToAnalyze.length} call records for query type: ${queryType}`
+    );
+    const metrics = preprocessCallData(recordsToAnalyze);
+
+    const context = prepareContextForQuery(
+      queryType || "general",
+      metrics,
+      recordsToAnalyze
+    );
+
+    const systemPrompt = `You are PRISM AI, an expert call center analytics assistant. Analyze the provided call center data and answer questions with precise, actionable insights.
+
+Key Guidelines:
+- Provide specific numbers, percentages, and trends
+- Highlight actionable recommendations
+- Use professional language appropriate for call center management
+- When discussing performance, include both positive insights and improvement opportunities
+- Format responses with clear headers and bullet points for readability
+- If data seems incomplete, mention limitations but still provide valuable insights from available data
+
+Always structure your response with:
+1. Direct answer to the question
+2. Supporting data/statistics
+3. Key insights or patterns
+4. Actionable recommendations (when relevant)`;
+
+    const userPrompt = `Based on the following call center data, please answer this question: "${query}"
+
+${context}
+
+Please provide a comprehensive analysis with specific metrics and actionable insights.`;
+
+    const messages = [
+      { role: "system", content: systemPrompt },
+      { role: "user", content: userPrompt },
+    ];
+
+    const startTime = Date.now();
+    const response = await callOpenAIWithRetry(messages);
+    const processingTime = Date.now() - startTime;
+
+    const assistantResponse =
+      response.choices[0]?.message?.content ||
+      "Unable to generate response. Please try rephrasing your question.";
+
+    const metadata = {
+      model: response.model,
+      tokensUsed: response.usage?.total_tokens || 0,
+      dataPoints: recordsToAnalyze.length,
+      processingTime,
+      queryType,
+      hasFullDispositions: fullRecords && fullRecords.length > 0,
+      cacheKey: `${query}_${recordsToAnalyze.length}`,
+    };
+
+    return NextResponse.json({
+      response: assistantResponse,
+      metadata,
+    });
+  } catch (error: any) {
+    console.error("OpenAI API Error:", error);
+
+    let errorMessage =
+      "An unexpected error occurred while processing your request.";
+    let statusCode = 500;
+
+    if (error?.status === 429) {
+      errorMessage = "Rate limit exceeded. Please wait a moment and try again.";
+      statusCode = 429;
+    } else if (error?.status === 400) {
+      errorMessage =
+        error.message || "Invalid request. Please try a different question.";
+      statusCode = 400;
+    } else if (error?.status === 401) {
+      errorMessage = "Authentication failed. Please check API configuration.";
+      statusCode = 401;
+    } else if (error?.message) {
+      errorMessage = error.message;
+    }
+
+    return NextResponse.json(
+      {
+        error: errorMessage,
+        details:
+          process.env.NODE_ENV === "development" ? error.stack : undefined,
+      },
+      { status: statusCode }
+    );
+  }
 }
